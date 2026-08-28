@@ -1,0 +1,41 @@
+# Node dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js
+/.next/
+/out/
+
+# Production
+/build
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env*.local
+.env
+
+# Google Credentials & Service Account Keys
+*credentials*.json
+*service-account*.json
+service-account.json
+credentials.json
+*.key.json
+
+# Prisma / SQLite
+prisma/*.db
+prisma/*.db-journal
+
+# TypeScript Build Info
+*.tsbuildinfo

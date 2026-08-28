@@ -1,0 +1,376 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Admin Users Model
+model AdminUser {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         String     @default("ADMIN") // SUPER_ADMIN, ADMIN, MANAGER
+  isActive     Boolean    @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+// 2. Rooms Model (STRICTLY NO BEDS - ONLY ROOM NUMBERS & CAPACITIES)
+model Room {
+  id                  String               @id @default(cuid())
+  roomNumber          String               @unique
+  floor               Int                  @default(1)
+  capacity            Int                  @default(1) // Number of residents allowed in this room (e.g. 1, 2, 3, 4, 5)
+  sharingType         String               @default("SINGLE") // SINGLE, DOUBLE, TRIPLE, FOUR_SHARE, FIVE_SHARE
+  amenities           String               @default("[]") // JSON stringified array of amenities
+  status              String               @default("AVAILABLE") // AVAILABLE, FULL, MAINTENANCE
+  notes               String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  
+  residents           Resident[]
+  monthlyPayments     MonthlyPayment[]
+  currentRoomChanges  RoomChangeRequest[]  @relation("CurrentRoom")
+  targetRoomChanges   RoomChangeRequest[]  @relation("TargetRoom")
+
+  @@index([roomNumber])
+  @@index([floor])
+  @@index([status])
+}
+
+// 3. Residents Model (Direct Room relationship - NO BEDS)
+model Resident {
+  id                    String              @id @default(cuid())
+  fullName              String
+  phone                 String              @unique
+  alternatePhone        String?
+  email                 String?
+  
+  // Room relationship (strictly room-based, multiple residents belong to the same roomId)
+  roomId                String
+  room                  Room                @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  
+  // Pricing agreement
+  monthlyRent           Float               @default(0.0) // Agreed monthly rent
+  securityDeposit       Float               @default(2000.0) // Agreed security deposit
+  
+  // Tenancy dates
+  checkInDate           DateTime            @default(now())
+  expectedCheckoutDate  DateTime?
+  checkOutDate          DateTime?
+  
+  // KYC & Emergency contact
+  idProofType           String?             // AADHAAR, PAN, PASSPORT, DRIVING_LICENSE, VOTER_ID
+  idProofNumber         String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  address               String?
+  
+  // Status lifecycle
+  status                String              @default("ACTIVE") // ACTIVE, NOTICE_PERIOD, VACATED
+  notes                 String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  monthlyPayments       MonthlyPayment[]
+  paymentRecords        PaymentRecord[]
+  receipts              Receipt[]
+  reminders             PaymentReminder[]
+  roomChangeRequests    RoomChangeRequest[]
+
+  @@index([phone])
+  @@index([roomId])
+  @@index([status])
+  @@index([checkInDate])
+}
+
+// 4. Registrations Model (Google Form Submissions Pending Review)
+model Registration {
+  id                     String    @id @default(cuid())
+  externalSource         String    @default("GOOGLE_FORM") // GOOGLE_FORM, MANUAL, WEB_PORTAL
+  externalResponseId     String?   @unique
+  fullName               String
+  mobileNumber           String
+  guardianName           String?
+  emergencyContactNumber String?
+  aadhaarNumber          String?
+  occupationType         String?
+  occupation             String?
+  companyOrCollegeName   String?
+  requestedRoomNumber    String?
+  checkInDate            DateTime?
+  monthlyRent            Float?    @default(0.0) // Monthly rent indicated in Google Form intake
+  securityDeposit        Float?    @default(2000.0)
+  declarationAccepted    Boolean   @default(false)
+  declarationAcceptedAt  DateTime?
+  sourceSubmittedAt      DateTime?
+  identityDocumentUrl    String?
+  googleDriveFileId      String?
+  status                 String    @default("NEW") // NEW, UNDER_REVIEW, APPROVED, REJECTED
+  reviewedBy             String?
+  reviewedAt             DateTime?
+  rejectionReason        String?
+  residentId             String?
+  rawSourceData          String?   // JSON string of the exact Google Sheet row data
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([externalResponseId])
+  @@index([mobileNumber])
+  @@index([status])
+  @@index([requestedRoomNumber])
+}
+
+// 5. Room Change Requests Model
+model RoomChangeRequest {
+  id                String    @id @default(cuid())
+  residentId        String
+  resident          Resident  @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  currentRoomId     String
+  currentRoom       Room      @relation("CurrentRoom", fields: [currentRoomId], references: [id], onDelete: Restrict)
+  requestedRoomId   String
+  requestedRoom     Room      @relation("TargetRoom", fields: [requestedRoomId], references: [id], onDelete: Restrict)
+  reason            String?
+  source            String    @default("GOOGLE_FORM") // GOOGLE_FORM, ADMIN, RESIDENT_REQUEST
+  status            String    @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([residentId])
+  @@index([currentRoomId])
+  @@index([requestedRoomId])
+  @@index([status])
+}
+
+// 6. Monthly Payments Model
+model MonthlyPayment {
+  id                   String          @id @default(cuid())
+  residentId           String
+  resident             Resident        @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  roomId               String
+  room                 Room            @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  
+  billingMonth         String          // Format: "YYYY-MM" (e.g., "2026-08")
+  rentAmount           Float
+  maintenanceAmount    Float           @default(0.0)
+  penaltyAmount        Float           @default(0.0)
+  discountAmount       Float           @default(0.0)
+  totalAmountDue       Float
+  
+  status               String          @default("PENDING") // PENDING, SUBMITTED, PAID, OVERDUE, REJECTED
+  dueDate              DateTime
+  paidDate             DateTime?
+  paymentMethod        String?         // CASH, UPI, BANK_TRANSFER, CHEQUE, OTHER
+  receiptNumber        String?         @unique
+  
+  // Automated Reminder Timeline Tracking
+  firstReminderSentAt  DateTime?
+  secondReminderSentAt DateTime?
+  reminderStatus       String          @default("IDLE") // IDLE, FIRST_REMINDER_SENT, SECOND_REMINDER_SENT, COMPLETED, CANCELLED
+  
+  transactionReference String?
+  paymentProofUrl      String?
+  verifiedByAdminName  String?
+  verifiedAt           DateTime?
+  
+  gatewayProvider      String?
+  gatewayOrderId       String?
+  gatewayPaymentId     String?
+  
+  notes                String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  
+  paymentRecords       PaymentRecord[]
+  receipts             Receipt[]
+  reminders            PaymentReminder[]
+
+  @@unique([residentId, billingMonth])
+  @@index([residentId])
+  @@index([roomId])
+  @@index([billingMonth])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// 7. Payment Records Model
+model PaymentRecord {
+  id                   String         @id @default(cuid())
+  monthlyPaymentId     String
+  monthlyPayment       MonthlyPayment @relation(fields: [monthlyPaymentId], references: [id], onDelete: Cascade)
+  residentId           String
+  resident             Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  
+  amountPaid           Float
+  paymentDate          DateTime       @default(now())
+  paymentMethod        String         // CASH, UPI, BANK_TRANSFER, CHEQUE, OTHER
+  transactionReference String?
+  proofAttachmentUrl   String?
+  status               String         @default("VERIFIED") // VERIFIED, PENDING_REVIEW, REJECTED
+  verifiedByAdminName  String?
+  notes                String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  @@index([monthlyPaymentId])
+  @@index([residentId])
+  @@index([paymentDate])
+  @@index([status])
+}
+
+// 8. Receipts Model
+model Receipt {
+  id               String         @id @default(cuid())
+  receiptNumber    String         @unique
+  monthlyPaymentId String
+  monthlyPayment   MonthlyPayment @relation(fields: [monthlyPaymentId], references: [id], onDelete: Cascade)
+  residentId       String?
+  resident         Resident?      @relation(fields: [residentId], references: [id], onDelete: SetNull)
+  
+  residentName     String
+  roomNumber       String
+  billingMonth     String
+  amountPaid       Float
+  paymentMethod    String
+  paymentDate      DateTime
+  generatedBy      String         @default("Admin")
+  notes            String?
+  googleDriveFileId String?
+  status           String         @default("READY") // PENDING, GENERATING, READY, FAILED
+  downloadToken    String?        @unique
+  createdAt        DateTime       @default(now())
+
+  @@index([receiptNumber])
+  @@index([monthlyPaymentId])
+  @@index([residentId])
+  @@index([billingMonth])
+  @@index([downloadToken])
+  @@index([googleDriveFileId])
+}
+
+// 9. Payment Reminders Model (Idempotent 2-Stage Automated WhatsApp Reminders)
+model PaymentReminder {
+  id                String          @id @default(cuid())
+  residentId        String
+  resident          Resident        @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  monthlyPaymentId  String?
+  monthlyPayment    MonthlyPayment? @relation(fields: [monthlyPaymentId], references: [id], onDelete: SetNull)
+  
+  reminderType      String          // FIRST_DUE_REMINDER, SECOND_REMINDER
+  channel           String          @default("WHATSAPP") // WHATSAPP, SMS, SYSTEM_NOTICE
+  scheduledFor      DateTime
+  sentAt            DateTime?
+  status            String          @default("PENDING") // PENDING, SENT, FAILED, CANCELLED
+  providerMessageId String?
+  failureReason     String?
+  attemptCount      Int             @default(0)
+  messageText       String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([monthlyPaymentId, reminderType])
+  @@index([residentId])
+  @@index([monthlyPaymentId])
+  @@index([status])
+  @@index([reminderType])
+  @@index([scheduledFor])
+}
+
+// 10. Reminder Templates Model
+model ReminderTemplate {
+  id           String   @id @default(cuid())
+  reminderType String   @unique
+  title        String
+  channel      String   @default("WHATSAPP")
+  templateBody String
+  isActive     Boolean  @default(true)
+  daysOffset   Int      @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
+// 11. Synchronization Logs Model (Google Sheets Sync Tracking)
+model SyncLog {
+  id           String    @id @default(cuid())
+  source       String    @default("GOOGLE_SHEETS") // GOOGLE_SHEETS, GOOGLE_DRIVE
+  status       String    @default("SUCCESS") // SUCCESS, RUNNING, ERROR, CONFIG_ERROR
+  rowsScanned  Int       @default(0)
+  newCount     Int       @default(0)
+  updatedCount Int       @default(0)
+  skippedCount Int       @default(0)
+  errorCount   Int       @default(0)
+  details      String?   // JSON summary / error message
+  durationMs   Int       @default(0)
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  @@index([source])
+  @@index([status])
+  @@index([startedAt])
+}
+
+// 12. Hostel Settings Model (Cleaned: Rent Due Rules & Penalties Removed)
+model HostelSettings {
+  id                  String   @id @default("default")
+  hostelName          String   @default("SAIRAM ELITE LIVING")
+  hostelAddress       String   @default("Plot #42, ITPL Main Road, Near Prestige Tech Park, Whitefield, Bengaluru - 560066")
+  contactPhone        String   @default("+91 98450 12345")
+  whatsAppNumber      String   @default("+91 98450 12345")
+  contactEmail        String   @default("contact@sairameliteliving.com")
+  websiteUrl          String   @default("https://sairameliteliving.com")
+  
+  bankName            String   @default("HDFC Bank")
+  accountHolderName   String   @default("SAIRAM ELITE LIVING HOSPITALITY LLP")
+  accountNumber       String   @default("50200098765432")
+  ifscCode            String   @default("HDFC0001892")
+  upiId               String   @default("sairamelite@hdfcbank")
+  paymentInstructions String   @default("Please transfer rent by the due date. Enter Resident Name & Room Number in remarks.")
+  
+  rulesAndRegulations String   @default("1. Gate curfew at 10:30 PM.\n2. Non-resident visitors permitted in lounge only until 8:00 PM.\n3. AC and geyser to be switched off when leaving room.\n4. Quiet hours strictly observed (11 PM - 6 AM).\n5. 30-day notice required before vacating.")
+  
+  updatedAt           DateTime @updatedAt
+}
+
+// 13. System Notifications Model
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO, WARNING, SUCCESS, ALERT
+  isRead    Boolean  @default(false)
+  linkUrl   String?
+  createdAt DateTime @default(now())
+
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// 14. System Audit Logs Model
+model AuditLog {
+  id          String     @id @default(cuid())
+  adminUserId String?
+  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+  adminName   String     @default("System")
+  action      String     // CREATE_ROOM, UPDATE_RESIDENT, RECORD_PAYMENT, UPDATE_SETTINGS, SYNC_GOOGLE_SHEETS, APPROVE_REGISTRATION, REJECT_REGISTRATION
+  entityType  String     // ROOM, RESIDENT, PAYMENT, SETTING, AUTH, REMINDER, REPORT, REGISTRATION, SYNC
+  entityId    String?
+  details     String?    // JSON metadata describing the change
+  ipAddress   String?
+  createdAt   DateTime   @default(now())
+
+  @@index([adminUserId])
+  @@index([entityType])
+  @@index([action])
+  @@index([createdAt])
+}

@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/sync/google-forms",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/reminders/process",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}
