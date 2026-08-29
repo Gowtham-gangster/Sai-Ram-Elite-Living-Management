@@ -27,6 +27,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Badge, StatusBadge, PaymentStatusBadge } from '@/components/ui/Badge';
 import { formatSharingType } from '@/lib/formatters';
+import { formatDate } from '@/lib/dateUtils';
 
 export default function ResidentsPage() {
   const [mounted, setMounted] = useState(false);
@@ -611,9 +612,7 @@ export default function ResidentsPage() {
                           {res.companyOrCollegeName || res.address || '—'}
                         </td>
                         <td className="p-4 text-slate-400 text-[11px]">
-                          {res.checkInDate
-                            ? new Date(res.checkInDate).toLocaleDateString('en-IN')
-                            : '—'}
+                          {formatDate(res.checkInDate)}
                         </td>
                         <td className="p-4 font-bold text-white">
                           ₹{Number(res.monthlyRent).toLocaleString('en-IN')}

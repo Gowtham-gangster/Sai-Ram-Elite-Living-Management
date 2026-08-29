@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatSharingType } from '@/lib/formatters';
+import { formatDate } from '@/lib/dateUtils';
 
 // Helper to convert number to Indian words
 function numberToWordsINR(amount: number): string {
@@ -184,7 +185,7 @@ export default function SingleReceiptPage() {
                 </span>
               </div>
               <div className="text-xs text-slate-600 mt-1">
-                Date: <strong>{new Date(receiptData.paymentDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
+                Date: <strong>{formatDate(receiptData.paymentDate)}</strong>
               </div>
             </div>
           </div>

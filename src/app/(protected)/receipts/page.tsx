@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   FileText,
 } from 'lucide-react';
-import { formatCurrency, formatIndianDate } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 
 export default function ReceiptsPage() {
   const [receipts, setReceipts] = useState<any[]>([]);
@@ -151,7 +151,7 @@ export default function ReceiptsPage() {
                     <td className="p-3">Room {r.roomNumber}</td>
                     <td className="p-3">{r.billingMonth}</td>
                     <td className="p-3 font-bold text-emerald-400">{formatCurrency(r.amountPaid)}</td>
-                    <td className="p-3">{formatIndianDate(r.paymentDate)}</td>
+                    <td className="p-3">{formatDate(r.paymentDate)}</td>
                     <td className="p-3">{r.paymentMethod || 'UPI'}</td>
                     <td className="p-3 text-right">
                       <a

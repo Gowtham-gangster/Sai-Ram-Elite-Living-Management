@@ -30,6 +30,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
 import Link from 'next/link';
+import { formatDate } from '@/lib/dateUtils';
 
 const AVAILABLE_AMENITIES = [
   'AC',
@@ -836,10 +837,7 @@ export default function AdminRoomsPage() {
                           {r.checkInDate && (
                             <span className="flex items-center gap-1">
                               <Calendar className="w-3 h-3 text-slate-500" /> Since{' '}
-                              {new Date(r.checkInDate).toLocaleDateString('en-IN', {
-                                month: 'short',
-                                year: 'numeric',
-                              })}
+                              {formatDate(r.checkInDate)}
                             </span>
                           )}
                         </div>

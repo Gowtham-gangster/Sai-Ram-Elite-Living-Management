@@ -30,6 +30,7 @@ import {
 import { StatCard } from '@/components/ui/StatCard';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { formatSharingType } from '@/lib/formatters';
+import { formatDate } from '@/lib/dateUtils';
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<any>(null);
@@ -426,7 +427,7 @@ export default function AdminDashboardPage() {
                         <span className="text-[10px] font-mono text-brand-400">R-{d.roomNumber}</span>
                       </div>
                       <div className="text-[10px] text-slate-500 mt-0.5">
-                        Due: {new Date(d.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        Due: {formatDate(d.dueDate)}
                       </div>
                     </div>
 
@@ -469,10 +470,7 @@ export default function AdminDashboardPage() {
 
                   <div className="text-right">
                     <span className="text-[10px] text-slate-500 block">
-                      {new Date(r.checkInDate).toLocaleDateString('en-IN', {
-                        day: 'numeric',
-                        month: 'short',
-                      })}
+                      {formatDate(r.checkInDate)}
                     </span>
                     <StatusBadge status={r.status} />
                   </div>

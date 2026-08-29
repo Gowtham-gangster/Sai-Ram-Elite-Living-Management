@@ -5,6 +5,7 @@ import {
   getReminderScheduleForDueDate,
   calculateEligibleReminderForToday,
 } from '@/lib/reminders/paymentReminderEngine';
+import { formatDate } from '@/lib/dateUtils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
       .replace(/{{billing_month}}/g, payment?.billingMonth || new Date().toISOString().slice(0, 7))
       .replace(
         /{{due_date}}/g,
-        payment ? new Date(payment.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '5th of this month'
+        payment ? formatDate(payment.dueDate) : '5th of this month'
       )
       .replace(/{{hostel_name}}/g, settings?.hostelName || 'SAIRAM ELITE LIVING')
       .replace(/{{upi_id}}/g, settings?.upiId || 'sairamelite@hdfcbank')
@@ -197,7 +198,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: isScheduled
-        ? `Reminder scheduled for ${resident.fullName} on ${new Date(scheduledDate).toLocaleDateString('en-IN')}.`
+        ? `Reminder scheduled for ${resident.fullName} on ${formatDate(scheduledDate)}.`
         : `Reminder recorded for ${resident.fullName} (Simulated Dispatch - No WhatsApp spam).`,
       reminder,
     }, { status: 201 });

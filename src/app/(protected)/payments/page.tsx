@@ -24,7 +24,7 @@ import {
   RotateCcw,
   Sparkles,
 } from 'lucide-react';
-import { formatCurrency, formatIndianDate } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { Badge, StatusBadge, PaymentStatusBadge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 
@@ -459,7 +459,7 @@ export default function PaymentsPage() {
                           )}
                         </td>
                         <td className="p-3 font-mono text-[11px] text-slate-300">
-                          {formatIndianDate(p.dueDate)}
+                          {formatDate(p.dueDate)}
                         </td>
                         <td className="p-3">
                           {isVerifiedPaid ? (
@@ -628,12 +628,12 @@ export default function PaymentsPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Due Date:</span>
-                <span className="font-mono text-slate-300">{formatIndianDate(selectedPayment.dueDate)}</span>
+                <span className="font-mono text-slate-300">{formatDate(selectedPayment.dueDate)}</span>
               </div>
               {selectedPayment.paidDate && (
                 <div className="flex justify-between">
                   <span className="text-slate-500">Settled On:</span>
-                  <span className="font-mono text-emerald-400">{formatIndianDate(selectedPayment.paidDate)}</span>
+                  <span className="font-mono text-emerald-400">{formatDate(selectedPayment.paidDate)}</span>
                 </div>
               )}
             </div>

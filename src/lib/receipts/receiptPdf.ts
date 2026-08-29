@@ -1,6 +1,7 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
+import { formatDate } from '@/lib/dateUtils';
 
 export interface ReceiptPdfData {
   receiptNumber: string;
@@ -168,11 +169,7 @@ export async function generateReceiptPdf(data: ReceiptPdfData): Promise<Uint8Arr
   page.drawText(data.receiptNumber, { x: 64, y: metaY - 16, size: 11, font: fontBold, color: darkNavy });
 
   // Payment Date
-  const dateFormatted = new Date(data.paymentDate).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+  const dateFormatted = formatDate(data.paymentDate);
   page.drawText('PAYMENT DATE', { x: 230, y: metaY, size: 8, font: fontBold, color: slateText });
   page.drawText(dateFormatted, { x: 230, y: metaY - 16, size: 10, font: fontBold, color: darkNavy });
 

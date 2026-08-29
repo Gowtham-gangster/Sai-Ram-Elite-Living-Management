@@ -27,6 +27,7 @@ import {
   LogOut,
   UserCheck,
 } from 'lucide-react';
+import { formatDate } from '@/lib/dateUtils';
 
 interface ResidentData {
   id: string;
@@ -1309,11 +1310,7 @@ export default function ResidentPaymentPortal() {
                           <div className="flex justify-between">
                             <span>Payment Date:</span>
                             <span className="text-slate-300">
-                              {new Date(r.paymentDate).toLocaleDateString('en-IN', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })}
+                              {formatDate(r.paymentDate)}
                             </span>
                           </div>
                           <div className="flex justify-between">

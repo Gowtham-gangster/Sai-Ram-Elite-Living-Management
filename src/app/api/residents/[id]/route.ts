@@ -88,6 +88,14 @@ export async function PUT(
       }
     }
 
+    const parsedCheckIn = new Date(data.checkInDate);
+    if (isNaN(parsedCheckIn.getTime())) {
+      return NextResponse.json(
+        { error: 'Invalid check-in date provided.' },
+        { status: 400 }
+      );
+    }
+
     const updatedResident = await db.resident.update({
       where: { id },
       data: {
@@ -98,7 +106,7 @@ export async function PUT(
         roomId: data.roomId,
         monthlyRent: data.monthlyRent,
         securityDeposit: data.securityDeposit !== undefined && data.securityDeposit !== null ? String(data.securityDeposit) : null,
-        checkInDate: new Date(data.checkInDate),
+        checkInDate: parsedCheckIn,
         expectedCheckoutDate: data.expectedCheckoutDate ? new Date(data.expectedCheckoutDate) : null,
         checkOutDate: data.checkOutDate ? new Date(data.checkOutDate) : null,
         idProofType: data.idProofType || 'AADHAAR',

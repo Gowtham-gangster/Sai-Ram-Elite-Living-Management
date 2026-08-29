@@ -20,7 +20,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { formatCurrency, formatIndianDate } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
 
 export default function ReportsPage() {
@@ -387,7 +387,7 @@ export default function ReportsPage() {
                         <td className="p-3 font-bold text-white">{r.fullName}</td>
                         <td className="p-3">Room {r.roomNumber} (Floor {r.floor})</td>
                         <td className="p-3 font-mono">{r.phone}</td>
-                        <td className="p-3">{formatIndianDate(r.checkInDate)}</td>
+                        <td className="p-3">{formatDate(r.checkInDate)}</td>
                         <td className="p-3 font-bold text-amber-400">{formatCurrency(r.agreedMonthlyRent)}</td>
                         <td className="p-3"><StatusBadge status={r.status} /></td>
                       </tr>
@@ -481,7 +481,7 @@ export default function ReportsPage() {
                         <td className="p-3">Room {p.roomNumber}</td>
                         <td className="p-3">{p.billingMonth}</td>
                         <td className="p-3 font-bold text-white">{formatCurrency(p.totalAmountDue)}</td>
-                        <td className="p-3">{formatIndianDate(p.dueDate)}</td>
+                        <td className="p-3">{formatDate(p.dueDate)}</td>
                         <td className="p-3"><StatusBadge status={p.status} /></td>
                       </tr>
                     ))}
@@ -524,7 +524,7 @@ export default function ReportsPage() {
                         <td className="p-3">Room {rc.roomNumber}</td>
                         <td className="p-3">{rc.billingMonth}</td>
                         <td className="p-3 font-bold text-emerald-400">{formatCurrency(rc.amountPaid)}</td>
-                        <td className="p-3">{formatIndianDate(rc.paymentDate)}</td>
+                        <td className="p-3">{formatDate(rc.paymentDate)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -563,7 +563,7 @@ export default function ReportsPage() {
                         <td className="p-3 font-bold text-white">{c.fullName}</td>
                         <td className="p-3">Room {c.roomNumber}</td>
                         <td className="p-3">{c.stayDurationDays} days</td>
-                        <td className="p-3">{formatIndianDate(c.checkOutDate)}</td>
+                        <td className="p-3">{formatDate(c.checkOutDate)}</td>
                         <td className="p-3 font-bold text-slate-200">{c.securityDeposit ? String(c.securityDeposit) : 'N/A'}</td>
                       </tr>
                     ))}

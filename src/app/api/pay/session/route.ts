@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getResidentSession } from '@/lib/residentAuth';
+import { formatDate } from '@/lib/dateUtils';
 
 function formatBillingMonth(isoMonth: string): string {
   try {
@@ -97,11 +98,7 @@ export async function GET(request: NextRequest) {
             totalAmountDue: selectedPayment.totalAmountDue,
             status: selectedPayment.status,
             isPaid: selectedPayment.status === 'PAID',
-            dueDateFormatted: new Date(selectedPayment.dueDate).toLocaleDateString('en-IN', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            }),
+            dueDateFormatted: formatDate(selectedPayment.dueDate),
           }
         : null,
     });

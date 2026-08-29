@@ -18,7 +18,7 @@ import {
   Loader2,
   TestTube,
 } from 'lucide-react';
-import { formatCurrency, formatIndianDate } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 
@@ -386,14 +386,14 @@ export default function RemindersPage() {
                     <td className="p-3 text-slate-400">
                       {rem.sentAt ? (
                         <div>
-                          <div className="text-white font-medium">{formatIndianDate(rem.sentAt)}</div>
+                          <div className="text-white font-medium">{formatDate(rem.sentAt)}</div>
                           <div className="text-[10px] text-slate-500">
                             {new Date(rem.sentAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
                       ) : (
                         <div>
-                          <div>Scheduled: {formatIndianDate(rem.scheduledFor)}</div>
+                          <div>Scheduled: {formatDate(rem.scheduledFor)}</div>
                         </div>
                       )}
                     </td>

@@ -32,6 +32,7 @@ import {
 import { Modal } from '@/components/ui/Modal';
 import { StatusBadge } from '@/components/ui/Badge';
 import Link from 'next/link';
+import { formatDate } from '@/lib/dateUtils';
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<any[]>([]);
@@ -612,7 +613,7 @@ export default function AdminPaymentsPage() {
                       <td className="py-4 px-4">
                         <span className="font-bold text-slate-200">{p.billingMonth}</span>
                         <div className="text-[10px] text-slate-500 mt-0.5">
-                          Due: {new Date(p.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                          Due: {formatDate(p.dueDate)}
                         </div>
                       </td>
 
@@ -631,7 +632,7 @@ export default function AdminPaymentsPage() {
                         </span>
                         {p.paidDate && (
                           <div className="text-[10px] text-emerald-400 mt-0.5">
-                            Paid {new Date(p.paidDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                            Paid {formatDate(p.paidDate)}
                           </div>
                         )}
                       </td>
@@ -830,11 +831,7 @@ export default function AdminPaymentsPage() {
               <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1">
                 <span className="text-slate-500 block text-[10px] uppercase font-bold">Due Date</span>
                 <span className="font-bold text-white">
-                  {new Date(inspectedPayment.dueDate).toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
+                  {formatDate(inspectedPayment.dueDate)}
                 </span>
               </div>
 
@@ -842,11 +839,7 @@ export default function AdminPaymentsPage() {
                 <span className="text-slate-500 block text-[10px] uppercase font-bold">Payment Date</span>
                 <span className="font-bold text-white">
                   {inspectedPayment.paidDate
-                    ? new Date(inspectedPayment.paidDate).toLocaleDateString('en-IN', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })
+                    ? formatDate(inspectedPayment.paidDate)
                     : 'Not Paid Yet'}
                 </span>
               </div>

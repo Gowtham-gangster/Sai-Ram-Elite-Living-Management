@@ -30,6 +30,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Badge, StatusBadge, PaymentStatusBadge } from '@/components/ui/Badge';
 import { maskAadhaar } from '@/lib/residentStats';
 import { formatSharingType } from '@/lib/formatters';
+import { formatDate } from '@/lib/dateUtils';
 
 export default function ResidentDetailPage() {
   const params = useParams();
@@ -324,7 +325,7 @@ export default function ResidentDetailPage() {
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Room {resident.room?.roomNumber || 'N/A'} • Since{' '}
-              {new Date(resident.checkInDate).toLocaleDateString('en-IN')}
+              {formatDate(resident.checkInDate)}
             </p>
           </div>
         </div>
@@ -513,9 +514,7 @@ export default function ResidentDetailPage() {
                 <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
                   <span className="text-[10px] text-slate-500 font-bold uppercase block">Last Paid Date</span>
                   <span className="text-xs font-semibold text-slate-300">
-                    {latestPayment?.paidDate
-                      ? new Date(latestPayment.paidDate).toLocaleDateString('en-IN')
-                      : '—'}
+                    {formatDate(latestPayment?.paidDate)}
                   </span>
                 </div>
               </div>
@@ -559,7 +558,7 @@ export default function ResidentDetailPage() {
                 <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
                   <span className="text-slate-500 block text-[10px] font-bold uppercase">Check-in Date</span>
                   <span className="font-semibold text-slate-200">
-                    {new Date(resident.checkInDate).toLocaleDateString('en-IN')}
+                    {formatDate(resident.checkInDate)}
                   </span>
                 </div>
                 <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
@@ -578,7 +577,7 @@ export default function ResidentDetailPage() {
                 <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
                   <span className="text-slate-500 block text-[10px] font-bold uppercase">Expected Checkout</span>
                   <span className="font-semibold text-amber-400">
-                    {new Date(resident.expectedCheckoutDate).toLocaleDateString('en-IN')}
+                    {formatDate(resident.expectedCheckoutDate)}
                   </span>
                 </div>
               )}
@@ -781,6 +780,33 @@ export default function ResidentDetailPage() {
                 placeholder="e.g. 2000, Yes, Paid, etc."
                 value={formData.securityDeposit}
                 onChange={(e) => setFormData({ ...formData, securityDeposit: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white focus:ring-2 focus:ring-amber-500 font-medium"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-300">
+                Check-in Date <span className="text-amber-400">*</span>
+              </label>
+              <input
+                type="date"
+                required
+                value={formData.checkInDate}
+                onChange={(e) => setFormData({ ...formData, checkInDate: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white focus:ring-2 focus:ring-amber-500 font-medium"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-300">
+                Expected Checkout Date
+              </label>
+              <input
+                type="date"
+                value={formData.expectedCheckoutDate}
+                onChange={(e) => setFormData({ ...formData, expectedCheckoutDate: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white focus:ring-2 focus:ring-amber-500 font-medium"
               />
             </div>

@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
-import { formatCurrency, formatIndianDate } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { maskAadhaar } from '@/lib/residentStats';
 
 export default function DashboardPage() {
@@ -333,7 +333,7 @@ export default function DashboardPage() {
                         <span>•</span>
                         <span>{reg.occupation} {reg.companyOrCollegeName ? `(${reg.companyOrCollegeName})` : ''}</span>
                         <span>•</span>
-                        <span>Check-in: {reg.checkInDate ? formatIndianDate(reg.checkInDate) : 'N/A'}</span>
+                        <span>Check-in: {formatDate(reg.checkInDate, 'N/A')}</span>
                       </div>
                     </div>
 
@@ -402,7 +402,7 @@ export default function DashboardPage() {
                     <div>
                       <div className="text-xs font-bold text-white">{res.fullName}</div>
                       <div className="text-[11px] text-slate-400 mt-0.5">
-                        Room {res.roomNumber} (Floor {res.floor}) • Joined: {formatIndianDate(res.checkInDate)}
+                        Room {res.roomNumber} (Floor {res.floor}) • Joined: {formatDate(res.checkInDate)}
                       </div>
                     </div>
                     <div className="text-right">

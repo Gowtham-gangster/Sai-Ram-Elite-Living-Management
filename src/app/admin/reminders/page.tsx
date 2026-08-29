@@ -32,6 +32,7 @@ import {
 import { Modal } from '@/components/ui/Modal';
 import { StatusBadge } from '@/components/ui/Badge';
 import Link from 'next/link';
+import { formatDate } from '@/lib/dateUtils';
 
 export default function AdminRemindersPage() {
   const [activeTab, setActiveTab] = useState<'CANDIDATES' | 'SCHEDULED' | 'SENT' | 'FAILED' | 'TEMPLATES'>('CANDIDATES');
@@ -431,7 +432,7 @@ export default function AdminRemindersPage() {
                       <td className="py-4 px-4 text-slate-300 font-semibold">{c.billingMonth}</td>
                       <td className="py-4 px-4 text-amber-400 font-bold">₹{c.amountDue.toLocaleString('en-IN')}</td>
                       <td className="py-4 px-4 text-slate-400">
-                        {new Date(c.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        {formatDate(c.dueDate)}
                       </td>
                       <td className="py-4 px-4">
                         <span
@@ -509,7 +510,7 @@ export default function AdminRemindersPage() {
                       <td className="py-4 px-4 font-mono text-brand-400 font-bold">Room {r.resident?.room?.roomNumber || 'N/A'}</td>
                       <td className="py-4 px-4 text-slate-300 font-semibold">{r.reminderType}</td>
                       <td className="py-4 px-4 text-slate-400">
-                        {new Date(r.scheduledFor).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        {formatDate(r.scheduledFor)}
                       </td>
                       <td className="py-4 px-4">
                         <span className="px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-bold text-[10px]">
@@ -747,7 +748,7 @@ export default function AdminRemindersPage() {
             <div className="flex justify-between">
               <span className="text-slate-400">Payment Due Date:</span>
               <span className="font-bold text-amber-400">
-                {inspectedSchedule?.dueDate ? new Date(inspectedSchedule.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
+                {formatDate(inspectedSchedule?.dueDate, 'N/A')}
               </span>
             </div>
             <div className="flex justify-between">
@@ -776,7 +777,7 @@ export default function AdminRemindersPage() {
                     </span>
                     <div>
                       <div className="font-semibold text-white">
-                        {new Date(s.scheduledFor).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {formatDate(s.scheduledFor)}
                       </div>
                       <div className="text-[10px] text-slate-400">{s.label}</div>
                     </div>

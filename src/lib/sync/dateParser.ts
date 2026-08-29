@@ -61,14 +61,13 @@ export function formatToIsoDateOnly(date: Date): string {
 }
 
 /**
- * Format Date object for display (e.g. 28 Aug 2026)
+ * Format Date object for display (e.g. 28-08-2026)
  */
 export function formatToIndianDisplayDate(date: Date): string {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const y = date.getUTCFullYear();
-  const m = months[date.getUTCMonth()];
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
   const d = String(date.getUTCDate()).padStart(2, '0');
-  return `${d} ${m} ${y}`;
+  return `${d}-${m}-${y}`;
 }
 
 /**

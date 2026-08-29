@@ -29,6 +29,7 @@ import { Modal } from '@/components/ui/Modal';
 import { StatusBadge } from '@/components/ui/Badge';
 import { maskAadhaar } from '@/lib/residentStats';
 import { formatSharingType } from '@/lib/formatters';
+import { formatDate } from '@/lib/dateUtils';
 
 export default function RegistrationDetailPage() {
   const params = useParams();
@@ -146,6 +147,14 @@ export default function RegistrationDetailPage() {
     }
   };
 
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/registrations');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
@@ -162,7 +171,7 @@ export default function RegistrationDetailPage() {
         <h2 className="text-base font-bold text-white">Registration Not Found</h2>
         <button
           type="button"
-          onClick={() => router.push('/registrations')}
+          onClick={handleBack}
           className="px-4 py-2 bg-slate-800 text-slate-200 rounded-2xl text-xs font-semibold"
         >
           Back to Registrations
@@ -180,8 +189,8 @@ export default function RegistrationDetailPage() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => router.push('/registrations')}
-            className="p-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition-all"
+            onClick={handleBack}
+            className="p-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer"
             aria-label="Back to Registrations"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -200,11 +209,9 @@ export default function RegistrationDetailPage() {
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Source: <span className="font-semibold text-slate-300">Google Form Submission</span> • Submitted{' '}
-              {registration.sourceSubmittedAt
-                ? new Date(registration.sourceSubmittedAt).toLocaleString('en-IN')
-                : new Date(registration.createdAt).toLocaleString('en-IN')}
+              {formatDate(registration.sourceSubmittedAt || registration.createdAt)}
               {new Date(registration.updatedAt).getTime() - new Date(registration.createdAt).getTime() > 2000 && (
-                <> • Last Synchronized: <span className="text-slate-300 font-medium">{new Date(registration.updatedAt).toLocaleString('en-IN')}</span></>
+                <> • Last Synchronized: <span className="text-slate-300 font-medium">{formatDate(registration.updatedAt)}</span></>
               )}
             </p>
           </div>
@@ -427,9 +434,7 @@ export default function RegistrationDetailPage() {
                 <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
                   <span className="text-slate-500 block text-[10px] font-bold uppercase">Check-in Date</span>
                   <span className="font-semibold text-slate-200">
-                    {registration.checkInDate
-                      ? new Date(registration.checkInDate).toLocaleDateString('en-IN')
-                      : '—'}
+                    {formatDate(registration.checkInDate)}
                   </span>
                 </div>
 

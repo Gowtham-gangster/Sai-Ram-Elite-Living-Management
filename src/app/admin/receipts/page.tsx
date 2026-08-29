@@ -28,6 +28,7 @@ import {
 import { Modal } from '@/components/ui/Modal';
 import { StatusBadge } from '@/components/ui/Badge';
 import Link from 'next/link';
+import { formatDate } from '@/lib/dateUtils';
 
 export default function AdminReceiptsPage() {
   const [receipts, setReceipts] = useState<any[]>([]);
@@ -385,11 +386,7 @@ export default function AdminReceiptsPage() {
 
                       {/* Payment Date */}
                       <td className="py-4 px-4 text-slate-400">
-                        {new Date(r.paymentDate).toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
+                        {formatDate(r.paymentDate)}
                       </td>
 
                       {/* Actions */}
@@ -524,7 +521,7 @@ export default function AdminReceiptsPage() {
                     {selectedReceipt.receiptNumber}
                   </div>
                   <div className="text-[10px] text-slate-500">
-                    Date: {new Date(selectedReceipt.paymentDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    Date: {formatDate(selectedReceipt.paymentDate)}
                   </div>
                 </div>
               </div>

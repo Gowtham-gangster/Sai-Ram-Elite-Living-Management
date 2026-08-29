@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import * as XLSX from 'xlsx';
+import { formatDate } from '@/lib/dateUtils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,8 +50,8 @@ export async function GET(request: NextRequest) {
       'Monthly Rent (INR)': p.rentAmount,
       'Total Amount Due (INR)': p.totalAmountDue,
       'Payment Status': p.status,
-      'Due Date': p.dueDate ? new Date(p.dueDate).toLocaleDateString('en-IN') : 'N/A',
-      'Paid Date': p.paidDate ? new Date(p.paidDate).toLocaleDateString('en-IN') : 'N/A',
+      'Due Date': formatDate(p.dueDate, 'N/A'),
+      'Paid Date': formatDate(p.paidDate, 'N/A'),
       'Payment Method': p.paymentMethod || (p.status === 'PAID' ? 'UPI' : 'N/A'),
       'Transaction Reference': p.transactionReference || 'N/A',
       'Gateway Provider': p.gatewayProvider || 'N/A',

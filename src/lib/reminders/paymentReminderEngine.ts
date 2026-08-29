@@ -64,15 +64,16 @@ export function getKolkataDateString(date: Date = new Date()): string {
 }
 
 /**
- * Formats a Date into "05 Sep 2026" in Asia/Kolkata timezone
+ * Formats a Date into "DD-MM-YYYY" in Asia/Kolkata timezone (e.g. "05-09-2026")
  */
 export function formatKolkataDisplayDate(date: Date): string {
-  return new Intl.DateTimeFormat('en-GB', {
+  const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Kolkata',
     day: '2-digit',
-    month: 'short',
+    month: '2-digit',
     year: 'numeric',
   }).format(date);
+  return parts.replace(/\//g, '-');
 }
 
 /**
@@ -399,6 +400,13 @@ export async function processPaymentReminders(): Promise<ReminderRunSummary> {
       }
 
       // 7. PREPARE & DISPATCH WHATSAPP REMINDER
+      const appUrl = (
+        process.env.APP_URL ||
+        process.env.NEXT_PUBLIC_APP_URL ||
+        'https://sairamhostel.com'
+      ).replace(/\/$/, '');
+      const paymentLink = `${appUrl}/pay?phone=${encodeURIComponent(payment.resident.phone)}`;
+
       const input: ResidentReminderInput = {
         residentId: payment.resident.id,
         residentName: payment.resident.fullName,
@@ -410,6 +418,7 @@ export async function processPaymentReminders(): Promise<ReminderRunSummary> {
         reminderType,
         sequence,
         overdueDays,
+        paymentLink,
       };
 
       const dispatchResult = await WhatsAppService.sendPaymentReminder(input);

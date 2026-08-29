@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FileCheck,
   RefreshCw,
@@ -29,8 +30,18 @@ import {
 import { Modal } from '@/components/ui/Modal';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { maskAadhaar } from '@/lib/residentStats';
+import { formatDate } from '@/lib/dateUtils';
 
-export default function RegistrationsPage() {
+function RegistrationsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Read URL query parameters as the single source of truth
+  const paramSearch = searchParams.get('search') || '';
+  const paramStatus = searchParams.get('status') || 'ALL';
+  const paramRoom = searchParams.get('room') || 'ALL';
+  const paramPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
+
   const [mounted, setMounted] = useState(false);
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, new: 0, underReview: 0, approved: 0, rejected: 0 });
@@ -42,11 +53,8 @@ export default function RegistrationsPage() {
   const [syncSummary, setSyncSummary] = useState<any>(null);
   const [latestSync, setLatestSync] = useState<any>(null);
 
-  // Filter & Search
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [roomFilter, setRoomFilter] = useState('ALL');
-  const [page, setPage] = useState(1);
+  // Search input local state
+  const [searchInput, setSearchInput] = useState(paramSearch);
   const [totalPages, setTotalPages] = useState(1);
 
   // Quick Action Modals
@@ -62,20 +70,62 @@ export default function RegistrationsPage() {
     setMounted(true);
   }, []);
 
+  // Synchronize search input when URL query param changes externally (e.g. browser back)
   useEffect(() => {
-    fetchRegistrations();
-    fetchRooms();
-    fetchSyncStatus();
-  }, [statusFilter, roomFilter, page]);
+    setSearchInput(paramSearch);
+  }, [paramSearch]);
 
-  const fetchRegistrations = async () => {
+  // Synchronize URL parameters with filter updates
+  const updateUrlParams = (updates: { search?: string; status?: string; room?: string; page?: number }) => {
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
+
+    const targetSearch = updates.search !== undefined ? updates.search : paramSearch;
+    const targetStatus = updates.status !== undefined ? updates.status : paramStatus;
+    const targetRoom = updates.room !== undefined ? updates.room : paramRoom;
+    const targetPage = updates.page !== undefined ? updates.page : 1;
+
+    if (targetSearch && targetSearch.trim()) {
+      params.set('search', targetSearch.trim());
+    } else {
+      params.delete('search');
+    }
+
+    if (targetStatus && targetStatus !== 'ALL') {
+      params.set('status', targetStatus);
+    } else {
+      params.delete('status');
+    }
+
+    if (targetRoom && targetRoom !== 'ALL') {
+      params.set('room', targetRoom);
+    } else {
+      params.delete('room');
+    }
+
+    if (targetPage > 1) {
+      params.set('page', targetPage.toString());
+    } else {
+      params.delete('page');
+    }
+
+    const queryString = params.toString();
+    const targetUrl = queryString ? `/registrations?${queryString}` : '/registrations';
+    router.replace(targetUrl, { scroll: false });
+  };
+
+  const fetchRegistrations = async (
+    status = paramStatus,
+    room = paramRoom,
+    search = paramSearch,
+    currentPage = paramPage
+  ) => {
     try {
       setIsLoading(true);
       const params = new URLSearchParams();
-      if (statusFilter !== 'ALL') params.append('status', statusFilter);
-      if (roomFilter !== 'ALL') params.append('room', roomFilter);
-      if (searchTerm) params.append('search', searchTerm);
-      params.append('page', page.toString());
+      if (status !== 'ALL') params.append('status', status);
+      if (room !== 'ALL') params.append('room', room);
+      if (search && search.trim()) params.append('search', search.trim());
+      params.append('page', currentPage.toString());
       params.append('limit', '15');
 
       const res = await fetch(`/api/registrations?${params.toString()}`);
@@ -92,6 +142,12 @@ export default function RegistrationsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchRegistrations(paramStatus, paramRoom, paramSearch, paramPage);
+    fetchRooms();
+    fetchSyncStatus();
+  }, [paramStatus, paramRoom, paramSearch, paramPage]);
 
   const fetchRooms = async () => {
     try {
@@ -130,7 +186,7 @@ export default function RegistrationsPage() {
       setActionSuccess(
         `Sync completed: ${data.newCount} new, ${data.updatedCount} updated, ${data.skippedCount} skipped.`
       );
-      fetchRegistrations();
+      fetchRegistrations(paramStatus, paramRoom, paramSearch, paramPage);
       fetchSyncStatus();
       setTimeout(() => setActionSuccess(null), 6000);
     } catch (err: any) {
@@ -142,8 +198,7 @@ export default function RegistrationsPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setPage(1);
-    fetchRegistrations();
+    updateUrlParams({ search: searchInput, page: 1 });
   };
 
   const handleApprove = async () => {
@@ -167,7 +222,7 @@ export default function RegistrationsPage() {
       setActionSuccess(`${selectedReg.fullName} approved and onboarded to Room ${selectedReg.requestedRoomNumber}!`);
       setIsApproveOpen(false);
       setSelectedReg(null);
-      fetchRegistrations();
+      fetchRegistrations(paramStatus, paramRoom, paramSearch, paramPage);
       setTimeout(() => setActionSuccess(null), 5000);
     } catch (err: any) {
       setActionError(err.message);
@@ -200,7 +255,7 @@ export default function RegistrationsPage() {
       setIsRejectOpen(false);
       setSelectedReg(null);
       setRejectionReason('');
-      fetchRegistrations();
+      fetchRegistrations(paramStatus, paramRoom, paramSearch, paramPage);
       setTimeout(() => setActionSuccess(null), 5000);
     } catch (err: any) {
       setActionError(err.message);
@@ -216,7 +271,7 @@ export default function RegistrationsPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to update review status.');
 
       setActionSuccess(`Registration for ${name} marked as Under Review.`);
-      fetchRegistrations();
+      fetchRegistrations(paramStatus, paramRoom, paramSearch, paramPage);
       setTimeout(() => setActionSuccess(null), 4000);
     } catch (err: any) {
       setActionError(err.message);
@@ -259,40 +314,36 @@ export default function RegistrationsPage() {
       {/* Integration Status Bar */}
       <div className="p-4 rounded-3xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+          <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
             <FileSpreadsheet className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white">Google Forms / Sheets Connected</span>
+              <span className="text-xs font-bold text-white">Google Sheet Two-Way Sync Active</span>
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </div>
-            <p className="text-[11px] text-slate-400" suppressHydrationWarning>
-              Last Synced:{' '}
-              {mounted && latestSync?.completedAt
-                ? new Date(latestSync.completedAt).toLocaleString('en-IN')
-                : 'Pending sync'}{' '}
-              • Status: <span className="text-emerald-400 font-semibold">Healthy</span>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Sync automatically ingests student onboarding responses directly from your connected Google Sheet.
             </p>
           </div>
         </div>
 
-        {syncSummary && (
-          <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-2xl bg-slate-950 border border-slate-800">
-            <span className="text-amber-400 font-bold">New: {syncSummary.newCount}</span>
-            <span className="text-slate-600">•</span>
-            <span className="text-sky-400">Updated: {syncSummary.updatedCount}</span>
-            <span className="text-slate-600">•</span>
-            <span className="text-slate-400">Skipped: {syncSummary.skippedCount}</span>
-            <span className="text-slate-600">•</span>
-            <span className={syncSummary.errorCount > 0 ? 'text-rose-400' : 'text-slate-400'}>
-              Errors: {syncSummary.errorCount}
+        <div className="text-right text-[11px] text-slate-400 shrink-0">
+          <div>
+            Last Sync:{' '}
+            <span className="font-semibold text-slate-200">
+              {latestSync?.completedAt
+                ? new Date(latestSync.completedAt).toLocaleTimeString('en-IN')
+                : 'Automated 15m'}
             </span>
           </div>
-        )}
+          <div className="text-[10px] text-slate-500">
+            Status: {latestSync?.status === 'SUCCESS' ? 'Healthy' : 'Active (Polling)'}
+          </div>
+        </div>
       </div>
 
-      {/* Alerts */}
+      {/* Global Action Alerts */}
       {actionSuccess && (
         <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -310,9 +361,9 @@ export default function RegistrationsPage() {
       {/* KPI Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div
-          onClick={() => { setStatusFilter('ALL'); setPage(1); }}
+          onClick={() => updateUrlParams({ status: 'ALL', page: 1 })}
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-            statusFilter === 'ALL'
+            paramStatus === 'ALL'
               ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
               : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
           }`}
@@ -322,9 +373,9 @@ export default function RegistrationsPage() {
         </div>
 
         <div
-          onClick={() => { setStatusFilter('NEW'); setPage(1); }}
+          onClick={() => updateUrlParams({ status: 'NEW', page: 1 })}
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-            statusFilter === 'NEW'
+            paramStatus === 'NEW'
               ? 'bg-sky-500/10 border-sky-500/40 text-sky-300'
               : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
           }`}
@@ -334,9 +385,9 @@ export default function RegistrationsPage() {
         </div>
 
         <div
-          onClick={() => { setStatusFilter('UNDER_REVIEW'); setPage(1); }}
+          onClick={() => updateUrlParams({ status: 'UNDER_REVIEW', page: 1 })}
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-            statusFilter === 'UNDER_REVIEW'
+            paramStatus === 'UNDER_REVIEW'
               ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
               : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
           }`}
@@ -346,9 +397,9 @@ export default function RegistrationsPage() {
         </div>
 
         <div
-          onClick={() => { setStatusFilter('APPROVED'); setPage(1); }}
+          onClick={() => updateUrlParams({ status: 'APPROVED', page: 1 })}
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-            statusFilter === 'APPROVED'
+            paramStatus === 'APPROVED'
               ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
               : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
           }`}
@@ -358,9 +409,9 @@ export default function RegistrationsPage() {
         </div>
 
         <div
-          onClick={() => { setStatusFilter('REJECTED'); setPage(1); }}
+          onClick={() => updateUrlParams({ status: 'REJECTED', page: 1 })}
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-            statusFilter === 'REJECTED'
+            paramStatus === 'REJECTED'
               ? 'bg-rose-500/10 border-rose-500/40 text-rose-300'
               : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
           }`}
@@ -377,8 +428,13 @@ export default function RegistrationsPage() {
           <input
             type="text"
             placeholder="Search by name, mobile, room, college..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value);
+              if (e.target.value === '') {
+                updateUrlParams({ search: '', page: 1 });
+              }
+            }}
             suppressHydrationWarning
             className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500"
           />
@@ -386,8 +442,8 @@ export default function RegistrationsPage() {
 
         <div className="flex items-center gap-2">
           <select
-            value={roomFilter}
-            onChange={(e) => { setRoomFilter(e.target.value); setPage(1); }}
+            value={paramRoom}
+            onChange={(e) => updateUrlParams({ room: e.target.value, page: 1 })}
             suppressHydrationWarning
             className="px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white focus:ring-2 focus:ring-amber-500"
           >
@@ -400,8 +456,8 @@ export default function RegistrationsPage() {
           </select>
 
           <select
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            value={paramStatus}
+            onChange={(e) => updateUrlParams({ status: e.target.value, page: 1 })}
             suppressHydrationWarning
             className="px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white focus:ring-2 focus:ring-amber-500"
           >
@@ -472,16 +528,14 @@ export default function RegistrationsPage() {
                         </span>
                       </td>
                       <td className="py-3.5 px-4">
-                        {reg.checkInDate ? new Date(reg.checkInDate).toLocaleDateString('en-IN') : '—'}
+                        {formatDate(reg.checkInDate)}
                       </td>
                       <td className="py-3.5 px-4 font-medium">{reg.occupation || 'Student'}</td>
                       <td className="py-3.5 px-4 text-slate-400 max-w-[150px] truncate">
                         {reg.companyOrCollegeName || '—'}
                       </td>
                       <td className="py-3.5 px-4 text-slate-400 text-[11px]">
-                        {reg.sourceSubmittedAt
-                          ? new Date(reg.sourceSubmittedAt).toLocaleDateString('en-IN')
-                          : new Date(reg.createdAt).toLocaleDateString('en-IN')}
+                        {formatDate(reg.sourceSubmittedAt || reg.createdAt)}
                       </td>
                       <td className="py-3.5 px-4">
                         <StatusBadge status={reg.status} />
@@ -500,10 +554,10 @@ export default function RegistrationsPage() {
                             <button
                               type="button"
                               onClick={() => handleMarkReview(reg.id, reg.fullName)}
-                              className="px-2 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[11px] font-semibold transition-all"
-                              title="Mark as Under Review"
+                              className="p-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 transition-all"
+                              title="Mark Under Review"
                             >
-                              Review
+                              <Clock className="w-3.5 h-3.5" />
                             </button>
                           )}
 
@@ -513,7 +567,7 @@ export default function RegistrationsPage() {
                                 type="button"
                                 onClick={() => { setSelectedReg(reg); setIsApproveOpen(true); }}
                                 className="p-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-all"
-                                title="Approve & Onboard Resident"
+                                title="Approve & Onboard"
                               >
                                 <Check className="w-3.5 h-3.5" />
                               </button>
@@ -560,7 +614,7 @@ export default function RegistrationsPage() {
                     <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
                       <span className="text-slate-500 block text-[9px] uppercase font-bold">Check-in</span>
                       <span className="font-semibold text-slate-200">
-                        {reg.checkInDate ? new Date(reg.checkInDate).toLocaleDateString('en-IN') : '—'}
+                        {formatDate(reg.checkInDate)}
                       </span>
                     </div>
                   </div>
@@ -602,21 +656,21 @@ export default function RegistrationsPage() {
             {/* Pagination Controls */}
             <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
               <span>
-                Page {page} of {totalPages}
+                Page {paramPage} of {totalPages}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
+                  disabled={paramPage <= 1}
+                  onClick={() => updateUrlParams({ page: paramPage - 1 })}
                   className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(page + 1)}
+                  disabled={paramPage >= totalPages}
+                  onClick={() => updateUrlParams({ page: paramPage + 1 })}
                   className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -649,27 +703,25 @@ export default function RegistrationsPage() {
               <span className="font-bold text-amber-400">Room {selectedReg?.requestedRoomNumber || 'N/A'}</span>
             </div>
             <div className="flex justify-between">
+              <span className="text-slate-500">Monthly Rent:</span>
+              <span className="font-bold text-white">₹{(selectedReg?.monthlyRent || 0).toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-slate-500">Security Deposit:</span>
-              <span className="font-semibold text-slate-200">
-                {selectedReg?.securityDeposit !== null &&
-                selectedReg?.securityDeposit !== undefined &&
-                String(selectedReg.securityDeposit).trim() !== ''
+              <span className="font-bold text-amber-400">
+                {selectedReg?.securityDeposit !== null && selectedReg?.securityDeposit !== undefined && String(selectedReg?.securityDeposit).trim() !== ''
                   ? selectedReg.securityDeposit
                   : 'Not provided'}
               </span>
             </div>
           </div>
 
-          <p className="text-[11px] text-slate-400">
-            Approving this submission will verify available room capacity, create an active resident record, and generate the initial rent billing ledger.
-          </p>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               disabled={isActionLoading}
               onClick={() => setIsApproveOpen(false)}
-              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-2xl text-xs font-semibold"
+              className="px-4 py-2 bg-slate-800 text-slate-300 rounded-2xl text-xs font-semibold"
             >
               Cancel
             </button>
@@ -677,21 +729,21 @@ export default function RegistrationsPage() {
               type="button"
               disabled={isActionLoading}
               onClick={handleApprove}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl text-xs flex items-center gap-2"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl text-xs flex items-center gap-2"
             >
-              {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              <span>Confirm & Approve</span>
+              {isActionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              <span>Confirm & Onboard Resident</span>
             </button>
           </div>
         </div>
       </Modal>
 
-      {/* Rejection Modal */}
+      {/* Rejection Confirmation Modal */}
       <Modal
         isOpen={isRejectOpen}
         onClose={() => !isActionLoading && setIsRejectOpen(false)}
         title={`Reject ${selectedReg?.fullName}`}
-        subtitle="Please specify a reason for rejecting this registration."
+        subtitle="Specify a reason for rejecting this registration submission."
       >
         <div className="space-y-4">
           <div className="space-y-1.5">
@@ -701,19 +753,19 @@ export default function RegistrationsPage() {
             <textarea
               rows={3}
               required
-              placeholder="e.g. Room capacity unavailable, invalid KYC documents, duplicate submission..."
+              placeholder="e.g. Room capacity exceeded, Invalid identity proof, etc."
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white focus:ring-2 focus:ring-rose-500 font-medium"
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-rose-500"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               disabled={isActionLoading}
               onClick={() => setIsRejectOpen(false)}
-              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-2xl text-xs font-semibold"
+              className="px-4 py-2 bg-slate-800 text-slate-300 rounded-2xl text-xs font-semibold"
             >
               Cancel
             </button>
@@ -721,14 +773,29 @@ export default function RegistrationsPage() {
               type="button"
               disabled={isActionLoading}
               onClick={handleReject}
-              className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-2xl text-xs flex items-center gap-2"
+              className="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-2xl text-xs flex items-center gap-2"
             >
-              {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {isActionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
               <span>Confirm Rejection</span>
             </button>
           </div>
         </div>
       </Modal>
     </div>
+  );
+}
+
+export default function RegistrationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+          <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+          <span>Loading registrations...</span>
+        </div>
+      }
+    >
+      <RegistrationsContent />
+    </Suspense>
   );
 }

@@ -38,6 +38,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
 import Link from 'next/link';
 import { formatSharingType } from '@/lib/formatters';
+import { formatDate } from '@/lib/dateUtils';
 
 export default function AdminResidentsPage() {
   const [residents, setResidents] = useState<any[]>([]);
@@ -692,16 +693,16 @@ export default function AdminResidentsPage() {
                       {/* Tenancy Dates */}
                       <td className="py-4 px-4">
                         <div className="text-slate-300 font-medium">
-                          In: {new Date(res.checkInDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          In: {formatDate(res.checkInDate)}
                         </div>
                         {res.status === 'NOTICE_PERIOD' && res.expectedCheckoutDate && (
                           <div className="text-[10px] text-amber-400 font-semibold mt-0.5">
-                            Notice: vacating {new Date(res.expectedCheckoutDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                            Notice: vacating {formatDate(res.expectedCheckoutDate)}
                           </div>
                         )}
                         {res.status === 'VACATED' && res.checkOutDate && (
                           <div className="text-[10px] text-slate-500 mt-0.5">
-                            Out: {new Date(res.checkOutDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            Out: {formatDate(res.checkOutDate)}
                           </div>
                         )}
                       </td>
@@ -951,11 +952,7 @@ export default function AdminResidentsPage() {
               <div>
                 <span className="text-slate-500 block text-[10px] uppercase font-bold">Check-in Date</span>
                 <span className="text-xs font-bold text-emerald-400 mt-1 block">
-                  {new Date(profileData.resident.checkInDate).toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
+                  {formatDate(profileData.resident.checkInDate)}
                 </span>
               </div>
             </div>

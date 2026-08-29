@@ -1,19 +1,25 @@
 /**
  * WhatsApp Provider Factory & Service Hub
+ * SAIRAM ELITE LIVING MANAGEMENT
  */
 
 import { IWhatsAppProvider, ResidentReminderInput, WhatsAppSendResult } from './types';
 import { MetaCloudApiProvider } from './metaCloudApi';
 
-class MockWhatsAppProvider implements IWhatsAppProvider {
+export class MockWhatsAppProvider implements IWhatsAppProvider {
+  validateConfiguration() {
+    return { valid: true, missingKeys: [] };
+  }
+
   async sendTemplateReminder(input: ResidentReminderInput): Promise<WhatsAppSendResult> {
     const mockId = `wa_mock_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     return {
       success: true,
       messageId: mockId,
-      renderedText: `Mock message for ${input.residentName}`,
+      renderedText: `Mock reminder for ${input.residentName} (₹${input.amountDue})`,
       recipientPhone: input.phone,
       timestamp: new Date(),
+      deliveryStatus: 'SENT',
     };
   }
 
@@ -24,6 +30,7 @@ class MockWhatsAppProvider implements IWhatsAppProvider {
       renderedText: text,
       recipientPhone: toPhone,
       timestamp: new Date(),
+      deliveryStatus: 'SENT',
     };
   }
 }
@@ -43,6 +50,13 @@ export class WhatsAppService {
    */
   public static resetToDefaultProvider() {
     this.provider = new MetaCloudApiProvider();
+  }
+
+  /**
+   * Validates WhatsApp configuration
+   */
+  public static validateConfiguration(): { valid: boolean; missingKeys: string[] } {
+    return this.provider.validateConfiguration();
   }
 
   /**

@@ -27,6 +27,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/Badge';
+import { formatDate } from '@/lib/dateUtils';
 
 type ReportTab =
   | 'RESIDENT'
@@ -495,7 +496,7 @@ export default function AdminReportsPage() {
                           <td className="py-3 px-3 text-slate-300">{r.sharingType}</td>
                           <td className="py-3 px-3 font-extrabold text-white print:text-black">₹{r.agreedMonthlyRent.toLocaleString('en-IN')}</td>
                           <td className="py-3 px-3 text-slate-400">
-                            {new Date(r.checkInDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {formatDate(r.checkInDate)}
                           </td>
                           <td className="py-3 px-3 text-slate-300">{r.emergencyContactName} ({r.emergencyContactPhone})</td>
                           <td className="py-3 px-3"><StatusBadge status={r.status} /></td>
@@ -564,7 +565,7 @@ export default function AdminReportsPage() {
                           <td className="py-3 px-3 text-slate-300">₹{p.rentAmount}</td>
                           <td className="py-3 px-3 text-slate-400">+₹{p.maintenanceAmount || 0} / +₹{p.penaltyAmount || 0}</td>
                           <td className="py-3 px-3 font-black text-white print:text-black">₹{p.totalAmountDue.toLocaleString('en-IN')}</td>
-                          <td className="py-3 px-3 text-slate-400">{new Date(p.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
+                          <td className="py-3 px-3 text-slate-400">{formatDate(p.dueDate)}</td>
                           <td className="py-3 px-3"><StatusBadge status={p.status} /></td>
                           <td className="py-3 px-3 text-slate-400">{p.receiptNumber !== 'N/A' ? p.receiptNumber : p.paymentMethod}</td>
                         </tr>
@@ -596,7 +597,7 @@ export default function AdminReportsPage() {
                           <td className="py-3 px-3 font-mono font-bold text-brand-400 print:text-black">Room {p.roomNumber}</td>
                           <td className="py-3 px-3 text-slate-300">{p.billingMonth}</td>
                           <td className="py-3 px-3 font-black text-amber-400 print:text-black">₹{p.amountDue.toLocaleString('en-IN')}</td>
-                          <td className="py-3 px-3 text-slate-400">{new Date(p.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                          <td className="py-3 px-3 text-slate-400">{formatDate(p.dueDate)}</td>
                           <td className="py-3 px-3 font-bold text-slate-300">{p.daysPending} days</td>
                           <td className="py-3 px-3"><StatusBadge status={p.status} /></td>
                         </tr>
@@ -628,7 +629,7 @@ export default function AdminReportsPage() {
                           <td className="py-3 px-3 font-mono font-bold text-brand-400 print:text-black">Room {p.roomNumber}</td>
                           <td className="py-3 px-3 text-slate-300">{p.billingMonth}</td>
                           <td className="py-3 px-3 font-black text-rose-400 print:text-black">₹{p.amountDue.toLocaleString('en-IN')}</td>
-                          <td className="py-3 px-3 text-slate-400">{new Date(p.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
+                          <td className="py-3 px-3 text-slate-400">{formatDate(p.dueDate)}</td>
                           <td className="py-3 px-3 font-bold text-rose-400 print:text-black">{p.daysOverdue} days</td>
                           <td className="py-3 px-3 font-bold text-amber-400 print:text-black">+₹{p.estimatedLateFee.toLocaleString('en-IN')}</td>
                         </tr>
@@ -662,7 +663,7 @@ export default function AdminReportsPage() {
                           <td className="py-3 px-3 font-black text-emerald-400 print:text-black">₹{rc.amountPaid.toLocaleString('en-IN')}</td>
                           <td className="py-3 px-3 text-slate-300 font-semibold">{rc.paymentMethod}</td>
                           <td className="py-3 px-3 text-slate-400">
-                            {new Date(rc.paymentDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {formatDate(rc.paymentDate)}
                           </td>
                           <td className="py-3 px-3 text-slate-400">{rc.generatedBy}</td>
                         </tr>
@@ -693,10 +694,10 @@ export default function AdminReportsPage() {
                           <td className="py-3 px-3 text-slate-400">{ck.phone}</td>
                           <td className="py-3 px-3 font-mono font-bold text-brand-400 print:text-black">Room {ck.roomNumber}</td>
                           <td className="py-3 px-3 text-slate-400">
-                            {new Date(ck.checkInDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {formatDate(ck.checkInDate)}
                           </td>
                           <td className="py-3 px-3 text-slate-400">
-                            {ck.checkOutDate ? new Date(ck.checkOutDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                            {formatDate(ck.checkOutDate)}
                           </td>
                           <td className="py-3 px-3 font-bold text-white print:text-black">{ck.stayDurationDays} days</td>
                           <td className="py-3 px-3 text-slate-300">{ck.securityDeposit ? String(ck.securityDeposit) : 'N/A'}</td>

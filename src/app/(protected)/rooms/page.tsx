@@ -23,7 +23,7 @@ import {
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
-import { formatSharingType, formatCurrency } from '@/lib/utils';
+import { formatSharingType, formatCurrency, formatDate } from '@/lib/utils';
 
 const SHARING_OPTIONS = [
   { value: 'SINGLE', label: 'Single Room (1 Person)', defaultCapacity: 1 },
@@ -816,7 +816,7 @@ export default function RoomsPage() {
                         <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1 justify-end">
                           <Calendar className="w-3 h-3" />
                           <span>
-                            Since {new Date(res.checkInDate).toLocaleDateString('en-IN')}
+                            Since {formatDate(res.checkInDate)}
                           </span>
                         </p>
                       </div>
