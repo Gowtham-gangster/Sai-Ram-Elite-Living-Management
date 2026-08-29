@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
     const endOfCurrentMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
 
-    // 1. Fetch Registrations Data & Counts
+    // 1. Fetch ALL Dashboard Sections in Parallel via Promise.all
     const [
       totalRegistrations,
       newRegistrations,
@@ -24,6 +24,10 @@ export async function GET(request: NextRequest) {
       approvedRegistrations,
       rejectedRegistrations,
       recentRegistrationsList,
+      rooms,
+      allResidents,
+      allPayments,
+      totalReceiptsCount,
     ] = await Promise.all([
       db.registration.count(),
       db.registration.count({ where: { status: 'NEW' } }),
@@ -48,21 +52,56 @@ export async function GET(request: NextRequest) {
           sourceSubmittedAt: true,
         },
       }),
+      // Rooms & Live Occupancy (Pruned projection)
+      db.room.findMany({
+        select: {
+          id: true,
+          roomNumber: true,
+          floor: true,
+          capacity: true,
+          sharingType: true,
+          paymentEnabled: true,
+          residents: {
+            where: { status: { in: ['ACTIVE', 'NOTICE_PERIOD'] } },
+            select: { id: true, fullName: true, phone: true, checkInDate: true, status: true, monthlyRent: true },
+          },
+        },
+        orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
+      }),
+      // Resident Records (Pruned projection)
+      db.resident.findMany({
+        select: {
+          id: true,
+          fullName: true,
+          phone: true,
+          monthlyRent: true,
+          status: true,
+          checkInDate: true,
+          room: { select: { roomNumber: true, floor: true, paymentEnabled: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      // Monthly Payments & Receipts (Pruned projection)
+      db.monthlyPayment.findMany({
+        select: {
+          id: true,
+          status: true,
+          totalAmountDue: true,
+          billingMonth: true,
+          paymentMethod: true,
+          paidDate: true,
+          receiptNumber: true,
+          resident: { select: { fullName: true, phone: true } },
+          room: { select: { roomNumber: true, paymentEnabled: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      db.receipt.count(),
     ]);
 
     const pendingRegistrations = newRegistrations + underReviewRegistrations;
 
-    // 2. Fetch Rooms & Live Occupancy (Strictly Room Numbers - Zero Beds)
-    const rooms = await db.room.findMany({
-      include: {
-        residents: {
-          where: { status: { in: ['ACTIVE', 'NOTICE_PERIOD'] } },
-          select: { id: true, fullName: true, phone: true, checkInDate: true, status: true },
-        },
-      },
-      orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
-    });
-
+    // 2. Compute Rooms & Live Occupancy
     const totalRooms = rooms.length;
     const totalRoomCapacity = rooms.reduce((acc, r) => acc + r.capacity, 0);
     const totalActiveResidents = rooms.reduce((acc, r) => acc + r.residents.length, 0);
@@ -96,14 +135,7 @@ export async function GET(request: NextRequest) {
     }
     const sharingBreakdown = Object.values(sharingMap);
 
-    // 3. Fetch Resident Records
-    const allResidents = await db.resident.findMany({
-      include: {
-        room: { select: { roomNumber: true, floor: true, paymentEnabled: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
+    // 3. Compute Resident Metrics
     const activeResidentsList = allResidents.filter(
       (r) => (r.status === 'ACTIVE' || r.status === 'NOTICE_PERIOD') && r.room?.paymentEnabled !== false
     );
@@ -116,18 +148,7 @@ export async function GET(request: NextRequest) {
 
     const residentsInNoticePeriod = allResidents.filter((r) => r.status === 'NOTICE_PERIOD').length;
 
-    // 4. Fetch Monthly Payments & Receipts
-    const [allPayments, totalReceiptsCount] = await Promise.all([
-      db.monthlyPayment.findMany({
-        include: {
-          resident: { select: { fullName: true, phone: true } },
-          room: { select: { roomNumber: true, paymentEnabled: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
-      db.receipt.count(),
-    ]);
-
+    // 4. Compute Payment Metrics
     const paidPaymentsList = allPayments.filter((p) => p.status === 'PAID');
     const paidPaymentsCount = paidPaymentsList.length;
     const totalPaymentsCollected = paidPaymentsList.reduce((acc, p) => acc + (p.totalAmountDue || 0), 0);

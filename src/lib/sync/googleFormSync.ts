@@ -290,6 +290,22 @@ export async function synchronizeGoogleFormResponses(triggeredBy: string = 'SYST
       allRooms.map((r: any) => [r.roomNumber.trim().toUpperCase(), r])
     );
 
+    // PERFORMANCE OPTIMIZATION: Single-Query Prefetching for Registrations
+    // Eliminates 60+ sequential database network round-trips inside the row loop
+    const existingRegistrationsList = await prisma.registration.findMany({
+      where: { externalSource: 'GOOGLE_FORM' },
+    });
+
+    const regByResponseId = new Map<string, any>();
+    const regByTimestamp = new Map<number, any>();
+    const regByMobile = new Map<string, any>();
+
+    for (const reg of existingRegistrationsList) {
+      if (reg.externalResponseId) regByResponseId.set(reg.externalResponseId, reg);
+      if (reg.sourceSubmittedAt) regByTimestamp.set(new Date(reg.sourceSubmittedAt).getTime(), reg);
+      if (reg.mobileNumber) regByMobile.set(reg.mobileNumber, reg);
+    }
+
     // 4. Process Each Row with ZERO Field Shifting & Robust Edit Detection
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -404,41 +420,25 @@ export async function synchronizeGoogleFormResponses(triggeredBy: string = 'SYST
         fullName
       );
 
-      // Multi-tier Priority Identity Lookup
+      // Multi-tier Fast In-Memory Identity Lookup (0 Network Roundtrips)
       // Priority 1: Match by exact externalResponseId (stable anchor or legacy ID)
-      let existingRegistration = await prisma.registration.findFirst({
-        where: {
-          externalSource: 'GOOGLE_FORM',
-          OR: [
-            { externalResponseId: candidateResponseId },
-            { externalResponseId: legacyResponseId },
-          ],
-        },
-      });
+      let existingRegistration =
+        regByResponseId.get(candidateResponseId) ||
+        regByResponseId.get(legacyResponseId);
 
       // Priority 2: Match by exact submission timestamp (if valid)
       if (!existingRegistration && parsedTimestamp.isValid && parsedTimestamp.date && timestampStr) {
-        existingRegistration = await prisma.registration.findFirst({
-          where: {
-            externalSource: 'GOOGLE_FORM',
-            sourceSubmittedAt: parsedTimestamp.date,
-          },
-        });
+        existingRegistration = regByTimestamp.get(parsedTimestamp.date.getTime());
       }
 
       // Priority 3: Fallback match by mobile number for Google Form registrations
       if (!existingRegistration && mobileNumber) {
-        existingRegistration = await prisma.registration.findFirst({
-          where: {
-            externalSource: 'GOOGLE_FORM',
-            mobileNumber,
-          },
-        });
+        existingRegistration = regByMobile.get(mobileNumber);
       }
 
       if (!existingRegistration) {
         // CREATE NEW REGISTRATION (Status: NEW)
-        await prisma.registration.create({
+        const createdReg = await prisma.registration.create({
           data: {
             externalSource: 'GOOGLE_FORM',
             externalResponseId: candidateResponseId,
@@ -463,6 +463,10 @@ export async function synchronizeGoogleFormResponses(triggeredBy: string = 'SYST
             rawSourceData: JSON.stringify(rawRowData),
           },
         });
+
+        regByResponseId.set(candidateResponseId, createdReg);
+        if (sourceSubmittedAt) regByTimestamp.set(new Date(sourceSubmittedAt).getTime(), createdReg);
+        if (mobileNumber) regByMobile.set(mobileNumber, createdReg);
 
         // Trigger in-app notification
         await prisma.notification.create({

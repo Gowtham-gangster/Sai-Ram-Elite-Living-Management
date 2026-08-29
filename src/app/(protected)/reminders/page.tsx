@@ -231,25 +231,33 @@ export default function RemindersPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Tracked</div>
-          <div className="text-2xl sm:text-3xl font-black text-white mt-1">{summary.total}</div>
+          <div className="text-2xl sm:text-3xl font-black text-white mt-1">
+            {isLoading ? <div className="h-8 w-14 bg-slate-800 rounded-lg animate-pulse mt-1" /> : summary.total}
+          </div>
           <div className="text-[11px] text-slate-400 mt-1">Lifecycle notifications</div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Sent Reminders</div>
-          <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-1">{summary.sent}</div>
+          <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-1">
+            {isLoading ? <div className="h-8 w-14 bg-slate-800 rounded-lg animate-pulse mt-1" /> : summary.sent}
+          </div>
           <div className="text-[11px] text-slate-400 mt-1">Dispatched via WhatsApp</div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Auto-Cancelled</div>
-          <div className="text-2xl sm:text-3xl font-black text-sky-400 mt-1">{summary.cancelled || 0}</div>
+          <div className="text-2xl sm:text-3xl font-black text-sky-400 mt-1">
+            {isLoading ? <div className="h-8 w-14 bg-slate-800 rounded-lg animate-pulse mt-1" /> : summary.cancelled || 0}
+          </div>
           <div className="text-[11px] text-slate-400 mt-1">Paid before follow-up</div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Due Candidates</div>
-          <div className="text-2xl sm:text-3xl font-black text-amber-400 mt-1">{candidates.length}</div>
+          <div className="text-2xl sm:text-3xl font-black text-amber-400 mt-1">
+            {isLoading ? <div className="h-8 w-14 bg-slate-800 rounded-lg animate-pulse mt-1" /> : candidates.length}
+          </div>
           <div className="text-[11px] text-slate-400 mt-1">Unpaid active dues</div>
         </div>
       </div>
@@ -468,7 +476,7 @@ export default function RemindersPage() {
               className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-white font-mono"
             />
             <p className="text-[10px] text-slate-500">
-              Leave blank to send to the resident's registered mobile number.
+              Leave blank to send to the resident&apos;s registered mobile number.
             </p>
           </div>
 

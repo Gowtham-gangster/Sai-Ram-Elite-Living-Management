@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        { fullName: { contains: search } },
+        { fullName: { contains: search, mode: 'insensitive' } },
         { mobileNumber: { contains: search } },
-        { companyOrCollegeName: { contains: search } },
-        { requestedRoomNumber: { contains: search } },
+        { companyOrCollegeName: { contains: search, mode: 'insensitive' } },
+        { requestedRoomNumber: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -36,6 +36,35 @@ export async function GET(request: NextRequest) {
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { sourceSubmittedAt: 'desc' },
+        select: {
+          id: true,
+          externalSource: true,
+          externalResponseId: true,
+          fullName: true,
+          mobileNumber: true,
+          guardianName: true,
+          emergencyContactNumber: true,
+          aadhaarNumber: true,
+          occupation: true,
+          occupationType: true,
+          companyOrCollegeName: true,
+          requestedRoomNumber: true,
+          checkInDate: true,
+          monthlyRent: true,
+          securityDeposit: true,
+          declarationAccepted: true,
+          declarationAcceptedAt: true,
+          sourceSubmittedAt: true,
+          identityDocumentUrl: true,
+          googleDriveFileId: true,
+          status: true,
+          reviewedBy: true,
+          reviewedAt: true,
+          rejectionReason: true,
+          residentId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       }),
       Promise.all([
         prisma.registration.count(),

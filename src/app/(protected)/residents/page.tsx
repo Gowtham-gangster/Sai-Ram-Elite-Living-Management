@@ -70,7 +70,7 @@ export default function ResidentsPage() {
   const [checkoutData, setCheckoutData] = useState({
     checkOutDate: new Date().toISOString().split('T')[0],
     reason: 'Normal Checkout',
-    refundDepositAmount: 2000,
+    refundDepositAmount: 0,
     deductionsAmount: 0,
     notes: '',
   });
@@ -88,7 +88,7 @@ export default function ResidentsPage() {
     roomId: '',
     checkInDate: new Date().toISOString().split('T')[0],
     expectedCheckoutDate: '',
-    monthlyRent: 8000,
+    monthlyRent: 0,
     securityDeposit: '',
     declarationAccepted: true,
     notes: '',

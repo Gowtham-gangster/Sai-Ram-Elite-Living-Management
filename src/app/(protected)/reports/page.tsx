@@ -245,34 +245,38 @@ export default function ReportsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Active Census</div>
-          <div className="text-2xl sm:text-3xl font-black text-white mt-1">{summary.totalActiveResidents}</div>
+          <div className="text-2xl sm:text-3xl font-black text-white mt-1">
+            {isLoading ? <div className="h-8 w-16 bg-slate-800 rounded-lg animate-pulse mt-1" /> : summary.totalActiveResidents}
+          </div>
           <div className="text-[11px] text-slate-400 mt-1">
-            {summary.occupancyPercentage}% of {summary.totalCapacity} capacity
+            {isLoading ? <div className="h-4 w-28 bg-slate-800/80 rounded-md animate-pulse mt-1" /> : `${summary.occupancyPercentage}% of ${summary.totalCapacity} capacity`}
           </div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Rooms</div>
-          <div className="text-2xl sm:text-3xl font-black text-sky-400 mt-1">{summary.totalRooms}</div>
+          <div className="text-2xl sm:text-3xl font-black text-sky-400 mt-1">
+            {isLoading ? <div className="h-8 w-16 bg-slate-800 rounded-lg animate-pulse mt-1" /> : summary.totalRooms}
+          </div>
           <div className="text-[11px] text-slate-400 mt-1">
-            {summary.totalCapacity} maximum resident slots
+            {isLoading ? <div className="h-4 w-32 bg-slate-800/80 rounded-md animate-pulse mt-1" /> : `${summary.totalCapacity} maximum resident slots`}
           </div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Collections</div>
           <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-1">
-            {formatCurrency(summary.totalCollectedAllTime)}
+            {isLoading ? <div className="h-8 w-24 bg-slate-800 rounded-lg animate-pulse mt-1" /> : formatCurrency(summary.totalCollectedAllTime)}
           </div>
           <div className="text-[11px] text-slate-400 mt-1">
-            {summary.totalReceiptsIssued} receipts generated
+            {isLoading ? <div className="h-4 w-28 bg-slate-800/80 rounded-md animate-pulse mt-1" /> : `${summary.totalReceiptsIssued} receipts generated`}
           </div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Outstanding Dues</div>
           <div className="text-2xl sm:text-3xl font-black text-amber-400 mt-1">
-            {formatCurrency(summary.totalPendingCurrent + summary.totalOverdueCurrent)}
+            {isLoading ? <div className="h-8 w-24 bg-slate-800 rounded-lg animate-pulse mt-1" /> : formatCurrency(summary.totalPendingCurrent + summary.totalOverdueCurrent)}
           </div>
           <div className="text-[11px] text-slate-400 mt-1">
             Across pending & overdue bills
@@ -346,8 +350,15 @@ export default function ReportsPage() {
           </button>
         </div>
 
-        {/* Tab 1: Resident Census */}
-        {activeTab === 'RESIDENTS' && (
+        {isLoading ? (
+          <div className="p-16 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+            <span>Compiling report analytics...</span>
+          </div>
+        ) : (
+          <>
+            {/* Tab 1: Resident Census */}
+            {activeTab === 'RESIDENTS' && (
           <div>
             {residentReport.length === 0 ? (
               <div className="py-12 text-center space-y-2 bg-slate-950/40 rounded-2xl border border-slate-800/60">
@@ -562,6 +573,8 @@ export default function ReportsPage() {
             )}
           </div>
         )}
+        </>
+      )}
       </div>
     </div>
   );

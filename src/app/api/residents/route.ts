@@ -19,19 +19,25 @@ export async function GET(request: NextRequest) {
     const where: any = {};
     if (status && status !== 'ALL') where.status = status;
     if (roomId && roomId !== 'ALL') where.roomId = roomId;
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : undefined;
+    const page = searchParams.get('page') ? parseInt(searchParams.get('page')!, 10) : 1;
+    const skip = limit ? (page - 1) * limit : undefined;
+
     if (search) {
       where.OR = [
-        { fullName: { contains: search } },
+        { fullName: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search } },
         { alternatePhone: { contains: search } },
-        { email: { contains: search } },
-        { room: { roomNumber: { contains: search } } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { room: { roomNumber: { contains: search, mode: 'insensitive' } } },
       ];
     }
 
     const residents = await db.resident.findMany({
       where,
       orderBy: { checkInDate: 'desc' },
+      take: limit,
+      skip,
       include: {
         room: {
           select: {

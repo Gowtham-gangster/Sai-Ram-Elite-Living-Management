@@ -51,7 +51,7 @@ export default function PaymentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [selectedMonth, setSelectedMonth] = useState('2026-08');
+  const [selectedMonth, setSelectedMonth] = useState('ALL');
 
   // Modals state
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
@@ -272,42 +272,54 @@ export default function PaymentsPage() {
         {/* 1. TOTAL DUE */}
         <div className="p-4 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[9px] uppercase font-bold tracking-wider text-slate-400">Total Due</div>
-          <div className="text-xl sm:text-2xl font-black text-white mt-1">{formatCurrency(summary.totalDues)}</div>
+          <div className="text-xl sm:text-2xl font-black text-white mt-1">
+            {isLoading ? <div className="h-7 w-20 bg-slate-800 rounded-lg animate-pulse mt-1" /> : formatCurrency(summary.totalDues)}
+          </div>
           <div className="text-[10px] text-slate-500 mt-1">Expected Rent</div>
         </div>
 
         {/* 2. TOTAL COLLECTED */}
         <div className="p-4 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[9px] uppercase font-bold tracking-wider text-emerald-400">Total Collected</div>
-          <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">{formatCurrency(summary.collectedAmount)}</div>
+          <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
+            {isLoading ? <div className="h-7 w-20 bg-slate-800 rounded-lg animate-pulse mt-1" /> : formatCurrency(summary.collectedAmount)}
+          </div>
           <div className="text-[10px] text-slate-500 mt-1">Verified Received</div>
         </div>
 
         {/* 3. PENDING */}
         <div className="p-4 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[9px] uppercase font-bold tracking-wider text-amber-400">Pending</div>
-          <div className="text-xl sm:text-2xl font-black text-amber-400 mt-1">{formatCurrency(summary.pendingAmount)}</div>
+          <div className="text-xl sm:text-2xl font-black text-amber-400 mt-1">
+            {isLoading ? <div className="h-7 w-20 bg-slate-800 rounded-lg animate-pulse mt-1" /> : formatCurrency(summary.pendingAmount)}
+          </div>
           <div className="text-[10px] text-slate-500 mt-1">Awaiting Settlement</div>
         </div>
 
         {/* 4. OVERDUE */}
         <div className="p-4 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[9px] uppercase font-bold tracking-wider text-rose-400">Overdue</div>
-          <div className="text-xl sm:text-2xl font-black text-rose-400 mt-1">{formatCurrency(summary.overdueAmount)}</div>
+          <div className="text-xl sm:text-2xl font-black text-rose-400 mt-1">
+            {isLoading ? <div className="h-7 w-20 bg-slate-800 rounded-lg animate-pulse mt-1" /> : formatCurrency(summary.overdueAmount)}
+          </div>
           <div className="text-[10px] text-slate-500 mt-1">Past Due Date</div>
         </div>
 
         {/* 5. PAID RESIDENTS */}
         <div className="p-4 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[9px] uppercase font-bold tracking-wider text-slate-400">Paid Residents</div>
-          <div className="text-xl sm:text-2xl font-black text-white mt-1">{summary.paidResidentsCount}</div>
+          <div className="text-xl sm:text-2xl font-black text-white mt-1">
+            {isLoading ? <div className="h-7 w-12 bg-slate-800 rounded-lg animate-pulse mt-1" /> : summary.paidResidentsCount}
+          </div>
           <div className="text-[10px] text-emerald-400 font-semibold mt-1">Cleared Rent</div>
         </div>
 
         {/* 6. PENDING RESIDENTS */}
         <div className="p-4 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-lg">
           <div className="text-[9px] uppercase font-bold tracking-wider text-slate-400">Pending Residents</div>
-          <div className="text-xl sm:text-2xl font-black text-amber-400 mt-1">{summary.pendingResidentsCount}</div>
+          <div className="text-xl sm:text-2xl font-black text-amber-400 mt-1">
+            {isLoading ? <div className="h-7 w-12 bg-slate-800 rounded-lg animate-pulse mt-1" /> : summary.pendingResidentsCount}
+          </div>
           <div className="text-[10px] text-slate-500 mt-1">Unsettled Residents</div>
         </div>
       </div>
@@ -380,7 +392,12 @@ export default function PaymentsPage() {
             </form>
           </div>
 
-          {payments.length === 0 ? (
+          {isLoading ? (
+            <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+              <RefreshCw className="w-6 h-6 animate-spin text-amber-400" />
+              <span>Loading payment ledger...</span>
+            </div>
+          ) : payments.length === 0 ? (
             <div className="py-12 text-center space-y-2 bg-slate-950/40 rounded-2xl border border-slate-800/60">
               <CreditCard className="w-10 h-10 text-slate-600 mx-auto" />
               <h3 className="text-xs font-bold text-slate-300">No payment records found</h3>

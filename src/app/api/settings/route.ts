@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { HostelSettingsSchema, UpdatePasswordSchema } from '@/lib/validations';
 import { createNotification } from '@/lib/notifications';
+import { getCachedHostelSettings, invalidateHostelSettingsCache } from '@/lib/cache/settingsCache';
 import bcrypt from 'bcryptjs';
 
 export async function GET() {
@@ -12,21 +13,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let settings = await db.hostelSettings.findUnique({
-      where: { id: 'default' },
-    });
-
-    if (!settings) {
-      settings = await db.hostelSettings.create({
-        data: { id: 'default' },
-      });
-    }
-
-    // Also get admin user profile details
-    const adminUser = await db.adminUser.findUnique({
-      where: { id: session.userId },
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
-    });
+    const [settings, adminUser] = await Promise.all([
+      getCachedHostelSettings(),
+      db.adminUser.findUnique({
+        where: { id: session.userId },
+        select: { id: true, name: true, email: true, role: true, createdAt: true },
+      }),
+    ]);
 
     // Sanitize settings object to not return bank details to the UI
     const sanitizedSettings = {
@@ -97,6 +90,8 @@ export async function PUT(request: NextRequest) {
       type: 'INFO',
       linkUrl: '/admin/settings',
     });
+
+    invalidateHostelSettingsCache();
 
     return NextResponse.json({ success: true, settings: updated });
   } catch (error: any) {

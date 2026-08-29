@@ -318,27 +318,37 @@ export default function AdminRoomsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Rooms</p>
-          <p className="text-xl sm:text-2xl font-black text-white mt-1">{rooms.length}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">{totalFullRooms} full / {rooms.length - totalFullRooms} available</p>
+          <div className="text-xl sm:text-2xl font-black text-white mt-1">
+            {isLoading ? <div className="h-7 w-12 bg-slate-800 rounded-lg animate-pulse mt-1" /> : rooms.length}
+          </div>
+          <p className="text-[10px] text-slate-500 mt-0.5">
+            {isLoading ? '...' : `${totalFullRooms} full / ${rooms.length - totalFullRooms} available`}
+          </p>
         </div>
 
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Capacity</p>
-          <p className="text-xl sm:text-2xl font-black text-brand-400 mt-1">{totalCapacity} Residents</p>
+          <div className="text-xl sm:text-2xl font-black text-brand-400 mt-1">
+            {isLoading ? <div className="h-7 w-16 bg-slate-800 rounded-lg animate-pulse mt-1" /> : `${totalCapacity} Residents`}
+          </div>
           <p className="text-[10px] text-slate-500 mt-0.5">Configured slots</p>
         </div>
 
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Residents</p>
-          <p className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">{totalOccupied} Occupied</p>
+          <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
+            {isLoading ? <div className="h-7 w-16 bg-slate-800 rounded-lg animate-pulse mt-1" /> : `${totalOccupied} Occupied`}
+          </div>
           <p className="text-[10px] text-slate-500 mt-0.5">
-            {totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0}% Occupancy
+            {isLoading ? '...' : `${totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0}% Occupancy`}
           </p>
         </div>
 
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Available Capacity</p>
-          <p className="text-xl sm:text-2xl font-black text-sky-400 mt-1">{totalAvailable} Slots</p>
+          <div className="text-xl sm:text-2xl font-black text-sky-400 mt-1">
+            {isLoading ? <div className="h-7 w-16 bg-slate-800 rounded-lg animate-pulse mt-1" /> : `${totalAvailable} Slots`}
+          </div>
           <p className="text-[10px] text-slate-500 mt-0.5">Ready for new check-in</p>
         </div>
       </div>
@@ -972,7 +982,7 @@ export default function AdminRoomsPage() {
                   Rent & Payment Management
                 </label>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Disable this option for rooms that are not part of the hostel's rent collection system (e.g. owner, staff, or complimentary rooms).
+                  Disable this option for rooms that are not part of the hostel&apos;s rent collection system (e.g. owner, staff, or complimentary rooms).
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer shrink-0">

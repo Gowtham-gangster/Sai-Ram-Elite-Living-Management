@@ -29,16 +29,16 @@ export default function AdminSettingsPage() {
 
   // Settings State (Bank details managed in .env)
   const [settingsForm, setSettingsForm] = useState({
-    hostelName: 'SAIRAM ELITE LIVING',
-    hostelAddress: 'Plot #42, ITPL Main Road, Near Prestige Tech Park, Whitefield, Bengaluru - 560066',
-    contactPhone: '+91 98450 12345',
-    whatsAppNumber: '+91 98450 12345',
-    contactEmail: 'contact@sairameliteliving.com',
-    websiteUrl: 'https://sairameliteliving.com',
+    hostelName: '',
+    hostelAddress: '',
+    contactPhone: '',
+    whatsAppNumber: '',
+    contactEmail: '',
+    websiteUrl: '',
     defaultDueDayOfMonth: 5,
-    lateFeePerDay: 50,
-    gracePeriodDays: 3,
-    rulesAndRegulations: '1. Gate curfew at 10:30 PM.\n2. Non-resident visitors permitted in lounge only until 8:00 PM.\n3. AC and geyser to be switched off when leaving room.\n4. Quiet hours strictly observed (11 PM - 6 AM).\n5. 30-day notice required before vacating.',
+    lateFeePerDay: 0,
+    gracePeriodDays: 0,
+    rulesAndRegulations: '',
   });
 
   // Admin Profile State
@@ -233,10 +233,24 @@ export default function AdminSettingsPage() {
         </button>
       </div>
 
-      {/* SECTION 3: REMINDER & POLICY SETTINGS */}
-      {activeTab === 'REMINDER' && (
-        <form onSubmit={handleSaveSettings} className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
-          <div className="border-b border-slate-800 pb-4">
+      {isLoading ? (
+        /* Settings Loading Skeleton - Never render dummy/fake data */
+        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6 animate-pulse">
+          <div className="h-6 w-56 bg-slate-800 rounded-xl" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
+            <div className="h-10 sm:col-span-2 bg-slate-850 rounded-xl" />
+            <div className="h-10 sm:col-span-2 bg-slate-850 rounded-xl" />
+            <div className="h-10 bg-slate-850 rounded-xl" />
+            <div className="h-10 bg-slate-850 rounded-xl" />
+          </div>
+          <div className="h-10 w-44 bg-slate-800 rounded-xl ml-auto" />
+        </div>
+      ) : (
+        <>
+          {/* SECTION 3: REMINDER & POLICY SETTINGS */}
+          {activeTab === 'REMINDER' && (
+            <form onSubmit={handleSaveSettings} className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
+              <div className="border-b border-slate-800 pb-4">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <Bell className="w-5 h-5 text-brand-400" />
               <span>Billing Cycle, Reminders & Policies</span>
@@ -349,17 +363,17 @@ export default function AdminSettingsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800">
                 <span className="text-slate-500 block text-[10px] uppercase font-bold">Admin Name</span>
-                <span className="text-sm font-bold text-white mt-0.5 block">{adminUser?.name || 'Administrator'}</span>
+                <span className="text-sm font-bold text-white mt-0.5 block">{adminUser?.name || '—'}</span>
               </div>
 
               <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800">
                 <span className="text-slate-500 block text-[10px] uppercase font-bold">Login Email</span>
-                <span className="text-sm font-bold text-white mt-0.5 block">{adminUser?.email || 'admin@sairam.com'}</span>
+                <span className="text-sm font-bold text-white mt-0.5 block">{adminUser?.email || '—'}</span>
               </div>
 
               <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800">
                 <span className="text-slate-500 block text-[10px] uppercase font-bold">Role & Permissions</span>
-                <span className="text-sm font-bold text-amber-400 mt-0.5 block">{adminUser?.role || 'SUPER_ADMIN'}</span>
+                <span className="text-sm font-bold text-amber-400 mt-0.5 block">{adminUser?.role || '—'}</span>
               </div>
             </div>
           </div>
@@ -445,6 +459,9 @@ export default function AdminSettingsPage() {
           </form>
         </div>
       )}
+        </>
+      )}
     </div>
   );
 }
+

@@ -22,13 +22,13 @@ export default function SettingsPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    hostelName: 'SAIRAM ELITE LIVING',
-    hostelAddress: 'Electronic City Phase 1, Bangalore, Karnataka 560100',
-    contactPhone: '+91 9876543210',
-    whatsAppNumber: '+91 9876543210',
-    contactEmail: 'admin@sairam.com',
-    websiteUrl: 'https://sairameliteliving.com',
-    rulesAndRegulations: '1. Gates close at 10:30 PM.\n2. Strictly no smoking inside hostel premises.',
+    hostelName: '',
+    hostelAddress: '',
+    contactPhone: '',
+    whatsAppNumber: '',
+    contactEmail: '',
+    websiteUrl: '',
+    rulesAndRegulations: '',
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -49,10 +49,15 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error('Unable to load hostel configuration.');
       const data = await res.json();
       if (data.settings) {
-        setFormData((prev) => ({
-          ...prev,
-          ...data.settings,
-        }));
+        setFormData({
+          hostelName: data.settings.hostelName || '',
+          hostelAddress: data.settings.hostelAddress || '',
+          contactPhone: data.settings.contactPhone || '',
+          whatsAppNumber: data.settings.whatsAppNumber || '',
+          contactEmail: data.settings.contactEmail || '',
+          websiteUrl: data.settings.websiteUrl || '',
+          rulesAndRegulations: data.settings.rulesAndRegulations || '',
+        });
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error fetching settings.');
@@ -162,16 +167,53 @@ export default function SettingsPage() {
       )}
 
       {errorMsg && (
-        <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5">
-          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-          <span className="font-semibold">{errorMsg}</span>
+        <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span className="font-semibold">{errorMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={fetchSettings}
+            className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
+          >
+            Retry
+          </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Hostel & Banking Config (Span 2) */}
-        <div className="lg:col-span-2 space-y-6">
-          <form onSubmit={handleSaveSettings} className="space-y-6">
+      {isLoading ? (
+        /* Settings Loading Skeleton - Never render dummy/fake data */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-pulse">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
+              <div className="h-6 w-48 bg-slate-800 rounded-xl" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="h-10 sm:col-span-2 bg-slate-800/80 rounded-xl" />
+                <div className="h-10 sm:col-span-2 bg-slate-800/80 rounded-xl" />
+                <div className="h-10 bg-slate-800/80 rounded-xl" />
+                <div className="h-10 bg-slate-800/80 rounded-xl" />
+              </div>
+              <div className="h-10 w-36 bg-slate-800 rounded-xl ml-auto pt-2" />
+            </div>
+          </div>
+          <div className="space-y-6">
+            <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
+              <div className="h-6 w-36 bg-slate-800 rounded-xl" />
+              <div className="space-y-3 pt-2">
+                <div className="h-10 bg-slate-800/80 rounded-xl" />
+                <div className="h-10 bg-slate-800/80 rounded-xl" />
+                <div className="h-10 bg-slate-800/80 rounded-xl" />
+                <div className="h-10 bg-slate-800 rounded-xl" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column: Hostel & Banking Config (Span 2) */}
+          <div className="lg:col-span-2 space-y-6">
+            <form onSubmit={handleSaveSettings} className="space-y-6">
             {/* Section 1: Hostel Details */}
             <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4 shadow-xl">
               <div className="flex items-center gap-2.5">
@@ -297,6 +339,8 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
+

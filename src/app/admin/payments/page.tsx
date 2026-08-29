@@ -91,7 +91,10 @@ export default function AdminPaymentsPage() {
 
   // Generate Dues Modal State
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
-  const [generateMonth, setGenerateMonth] = useState('2026-09');
+  const [generateMonth, setGenerateMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   // Feedback State
   const [actionError, setActionError] = useState<string | null>(null);
@@ -401,40 +404,44 @@ export default function AdminPaymentsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Billed</p>
-          <p className="text-xl sm:text-2xl font-black text-white mt-1">
-            ₹{(summary.totalDues || 0).toLocaleString('en-IN')}
-          </p>
+          <div className="text-xl sm:text-2xl font-black text-white mt-1">
+            {isLoading ? <div className="h-7 w-24 bg-slate-800 rounded-lg animate-pulse mt-1" /> : `₹${(summary.totalDues || 0).toLocaleString('en-IN')}`}
+          </div>
           <p className="text-[10px] text-slate-500 mt-0.5">{summary.totalCount || 0} total records</p>
         </div>
 
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Collected Revenue</p>
-          <p className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
-            ₹{(summary.collectedAmount || 0).toLocaleString('en-IN')}
-          </p>
+          <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
+            {isLoading ? <div className="h-7 w-24 bg-slate-800 rounded-lg animate-pulse mt-1" /> : `₹${(summary.collectedAmount || 0).toLocaleString('en-IN')}`}
+          </div>
           <p className="text-[10px] text-slate-500 mt-0.5">{summary.paidCount || 0} paid & verified</p>
         </div>
 
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending Dues</p>
-          <p className="text-xl sm:text-2xl font-black text-amber-400 mt-1">
-            ₹{(summary.pendingAmount || 0).toLocaleString('en-IN')}
-          </p>
+          <div className="text-xl sm:text-2xl font-black text-amber-400 mt-1">
+            {isLoading ? <div className="h-7 w-24 bg-slate-800 rounded-lg animate-pulse mt-1" /> : `₹${(summary.pendingAmount || 0).toLocaleString('en-IN')}`}
+          </div>
           <p className="text-[10px] text-slate-500 mt-0.5">{summary.pendingCount || 0} unpaid accounts</p>
         </div>
 
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Submitted / Overdue</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xl sm:text-2xl font-black text-sky-400">
-              {summary.submittedCount || 0}
-            </span>
-            <span className="text-xs text-slate-500">review /</span>
-            <span className="text-xl sm:text-2xl font-black text-rose-400">
-              {summary.overdueCount || 0}
-            </span>
-            <span className="text-xs text-slate-500">overdue</span>
-          </div>
+          {isLoading ? (
+            <div className="h-7 w-24 bg-slate-800 rounded-lg animate-pulse mt-1" />
+          ) : (
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xl sm:text-2xl font-black text-sky-400">
+                {summary.submittedCount || 0}
+              </span>
+              <span className="text-xs text-slate-500">review /</span>
+              <span className="text-xl sm:text-2xl font-black text-rose-400">
+                {summary.overdueCount || 0}
+              </span>
+              <span className="text-xs text-slate-500">overdue</span>
+            </div>
+          )}
           <p className="text-[10px] text-slate-500 mt-0.5">Requiring attention</p>
         </div>
       </div>
@@ -1186,7 +1193,7 @@ export default function AdminPaymentsPage() {
           </div>
 
           <div className="p-3.5 bg-slate-900/70 rounded-2xl border border-slate-800 text-slate-400 text-[11px] leading-relaxed">
-            This will calculate dues for all active residents using their room's configured rent + standard maintenance. Residents who already have a bill for this month will be skipped to avoid duplicate charges.
+            This will calculate dues for all active residents using their room&apos;s configured rent + standard maintenance. Residents who already have a bill for this month will be skipped to avoid duplicate charges.
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">

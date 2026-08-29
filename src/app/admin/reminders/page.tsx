@@ -302,7 +302,9 @@ export default function AdminRemindersPage() {
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Due Soon / Candidates</p>
           <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-black text-white">{candidates.length}</span>
+            <span className="text-2xl font-black text-white">
+              {isLoading ? <div className="h-7 w-12 bg-slate-800 rounded-lg animate-pulse mt-1" /> : candidates.length}
+            </span>
             <span className="text-[11px] text-amber-400 font-semibold">Unpaid Dues</span>
           </div>
           <p className="text-[10px] text-slate-500 mt-0.5">Requiring reminder notices</p>
@@ -310,25 +312,25 @@ export default function AdminRemindersPage() {
 
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Scheduled & Queued</p>
-          <p className="text-xl sm:text-2xl font-black text-sky-400 mt-1">
-            {summary.scheduled || scheduledReminders.length}
-          </p>
+          <div className="text-xl sm:text-2xl font-black text-sky-400 mt-1">
+            {isLoading ? <div className="h-7 w-12 bg-slate-800 rounded-lg animate-pulse mt-1" /> : (summary.scheduled || scheduledReminders.length)}
+          </div>
           <p className="text-[10px] text-slate-500 mt-0.5">Pending automated dispatch</p>
         </div>
 
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sent Dispatches</p>
-          <p className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
-            {summary.sent || sentReminders.length}
-          </p>
+          <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
+            {isLoading ? <div className="h-7 w-12 bg-slate-800 rounded-lg animate-pulse mt-1" /> : (summary.sent || sentReminders.length)}
+          </div>
           <p className="text-[10px] text-slate-500 mt-0.5">Documented in history</p>
         </div>
 
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Failed Attempts</p>
-          <p className="text-xl sm:text-2xl font-black text-rose-400 mt-1">
-            {summary.failed || failedReminders.length}
-          </p>
+          <div className="text-xl sm:text-2xl font-black text-rose-400 mt-1">
+            {isLoading ? <div className="h-7 w-12 bg-slate-800 rounded-lg animate-pulse mt-1" /> : (summary.failed || failedReminders.length)}
+          </div>
           <p className="text-[10px] text-slate-500 mt-0.5">Requiring review</p>
         </div>
       </div>
@@ -395,7 +397,12 @@ export default function AdminRemindersPage() {
             <span className="text-xs text-slate-400">{candidates.length} candidates detected</span>
           </div>
 
-          {candidates.length === 0 ? (
+          {isLoading ? (
+            <div className="py-20 text-center">
+              <div className="w-8 h-8 border-3 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-xs text-slate-400">Loading reminder candidates...</p>
+            </div>
+          ) : candidates.length === 0 ? (
             <div className="p-16 text-center text-slate-500">
               No unpaid dues requiring immediate reminders.
             </div>
@@ -703,7 +710,7 @@ export default function AdminRemindersPage() {
               onChange={(e) => setTestPhoneOverride(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white font-mono"
             />
-            <p className="text-[10px] text-slate-500 mt-1">Leave empty to dispatch to the resident's registered phone.</p>
+            <p className="text-[10px] text-slate-500 mt-1">Leave empty to dispatch to the resident&apos;s registered phone.</p>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">

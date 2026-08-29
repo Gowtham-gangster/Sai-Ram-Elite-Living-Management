@@ -196,7 +196,7 @@ async function runUpiVerificationTests() {
         phone: phoneV,
         roomId: room904.id,
         monthlyRent: 9000.0,
-        securityDeposit: 3000.0,
+        securityDeposit: '3000',
         status: 'ACTIVE',
         idProofType: 'AADHAAR',
         idProofNumber: '666677778888',

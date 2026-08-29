@@ -69,7 +69,7 @@ export default function AdminResidentsPage() {
     alternatePhone: '',
     email: '',
     roomId: '',
-    monthlyRent: 8000,
+    monthlyRent: 0,
     securityDeposit: '',
     checkInDate: new Date().toISOString().slice(0, 10),
     expectedCheckoutDate: '',

@@ -97,7 +97,7 @@ export default function AdminReportsPage() {
 
   // Unique Months for Filter
   const availableMonths: string[] = useMemo(() => {
-    if (!reports.monthlyPaymentReport) return ['2026-08', '2026-09'];
+    if (!reports.monthlyPaymentReport) return [];
     const months = Array.from(new Set<string>(reports.monthlyPaymentReport.map((p: any) => String(p.billingMonth)))).sort().reverse();
     return months;
   }, [reports]);
@@ -226,35 +226,35 @@ export default function AdminReportsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 print:grid-cols-4">
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hostel Occupancy</p>
-          <p className="text-xl sm:text-2xl font-black text-brand-400 mt-1">
-            {summary.occupancyPercentage}%
-          </p>
+          <div className="text-xl sm:text-2xl font-black text-brand-400 mt-1">
+            {isLoading ? <div className="h-7 w-16 bg-slate-800 rounded-lg animate-pulse mt-1" /> : `${summary.occupancyPercentage || 0}%`}
+          </div>
           <p className="text-[10px] text-slate-500 mt-0.5">
-            {summary.totalActiveResidents} active / {summary.totalCapacity} total slots
+            {summary.totalActiveResidents || 0} active / {summary.totalCapacity || 0} total slots
           </p>
         </div>
 
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Revenue Collected</p>
-          <p className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
-            ₹{(summary.totalCollectedAllTime || 0).toLocaleString('en-IN')}
-          </p>
-          <p className="text-[10px] text-slate-500 mt-0.5">{summary.totalReceiptsIssued} receipts generated</p>
+          <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
+            {isLoading ? <div className="h-7 w-24 bg-slate-800 rounded-lg animate-pulse mt-1" /> : `₹${(summary.totalCollectedAllTime || 0).toLocaleString('en-IN')}`}
+          </div>
+          <p className="text-[10px] text-slate-500 mt-0.5">{summary.totalReceiptsIssued || 0} receipts generated</p>
         </div>
 
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending Dues</p>
-          <p className="text-xl sm:text-2xl font-black text-amber-400 mt-1">
-            ₹{(summary.totalPendingCurrent || 0).toLocaleString('en-IN')}
-          </p>
+          <div className="text-xl sm:text-2xl font-black text-amber-400 mt-1">
+            {isLoading ? <div className="h-7 w-24 bg-slate-800 rounded-lg animate-pulse mt-1" /> : `₹${(summary.totalPendingCurrent || 0).toLocaleString('en-IN')}`}
+          </div>
           <p className="text-[10px] text-slate-500 mt-0.5">Unpaid / in review</p>
         </div>
 
         <div className="glass-panel p-4 rounded-2xl border border-slate-800">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overdue Dues</p>
-          <p className="text-xl sm:text-2xl font-black text-rose-400 mt-1">
-            ₹{(summary.totalOverdueCurrent || 0).toLocaleString('en-IN')}
-          </p>
+          <div className="text-xl sm:text-2xl font-black text-rose-400 mt-1">
+            {isLoading ? <div className="h-7 w-24 bg-slate-800 rounded-lg animate-pulse mt-1" /> : `₹${(summary.totalOverdueCurrent || 0).toLocaleString('en-IN')}`}
+          </div>
           <p className="text-[10px] text-slate-500 mt-0.5">Past due date</p>
         </div>
       </div>
@@ -458,7 +458,12 @@ export default function AdminReportsPage() {
           </div>
         </div>
 
-        {filteredList.length === 0 ? (
+        {isLoading ? (
+          <div className="py-20 text-center">
+            <div className="w-8 h-8 border-3 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-xs text-slate-400">Loading report census...</p>
+          </div>
+        ) : filteredList.length === 0 ? (
           <div className="p-16 text-center text-slate-500">
             No matching records found for the selected filter criteria.
           </div>

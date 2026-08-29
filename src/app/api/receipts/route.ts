@@ -27,22 +27,38 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        { receiptNumber: { contains: search } },
-        { residentName: { contains: search } },
-        { roomNumber: { contains: search } },
-        { notes: { contains: search } },
+        { receiptNumber: { contains: search, mode: 'insensitive' } },
+        { residentName: { contains: search, mode: 'insensitive' } },
+        { roomNumber: { contains: search, mode: 'insensitive' } },
+        { notes: { contains: search, mode: 'insensitive' } },
       ];
     }
 
     const receipts = await db.receipt.findMany({
       where,
       orderBy: { paymentDate: 'desc' },
-      include: {
+      select: {
+        id: true,
+        receiptNumber: true,
+        residentName: true,
+        roomNumber: true,
+        billingMonth: true,
+        amountPaid: true,
+        paymentMethod: true,
+        paymentDate: true,
+        googleDriveFileId: true,
+        googleDriveFolderId: true,
+        receiptFileName: true,
+        driveUploadStatus: true,
+        status: true,
+        downloadToken: true,
+        createdAt: true,
+        notes: true,
         monthlyPayment: {
-          include: {
-            resident: true,
-            room: true,
-            paymentRecords: true,
+          select: {
+            id: true,
+            transactionReference: true,
+            room: { select: { roomNumber: true, floor: true } },
           },
         },
       },

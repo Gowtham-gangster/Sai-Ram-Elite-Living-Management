@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
+import { getCachedHostelSettings } from '@/lib/cache/settingsCache';
 
 import { formatSharingType } from '@/lib/formatters';
 import { maskAadhaar } from '@/lib/residentStats';
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     const now = new Date();
 
-    // 1. Fetch All Data for Unified Reports
+    // 1. Fetch All Data for Unified Reports in Parallel
     const [allRooms, allResidents, allPayments, allReceipts, hostelSettings] = await Promise.all([
       db.room.findMany({
         include: {
@@ -37,7 +38,18 @@ export async function GET(request: NextRequest) {
       db.resident.findMany({
         include: {
           room: { select: { roomNumber: true, floor: true, sharingType: true } },
-          monthlyPayments: { orderBy: { billingMonth: 'desc' } },
+          monthlyPayments: {
+            orderBy: { billingMonth: 'desc' },
+            select: {
+              id: true,
+              billingMonth: true,
+              totalAmountDue: true,
+              status: true,
+              receiptNumber: true,
+              dueDate: true,
+              paidDate: true,
+            },
+          },
         },
         orderBy: { checkInDate: 'desc' },
       }),
@@ -45,20 +57,29 @@ export async function GET(request: NextRequest) {
         include: {
           resident: { select: { id: true, fullName: true, phone: true, alternatePhone: true, status: true } },
           room: { select: { id: true, roomNumber: true, floor: true, sharingType: true } },
-          receipts: true,
-          paymentRecords: true,
+          receipts: { select: { receiptNumber: true, googleDriveFileId: true } },
+          paymentRecords: { select: { paymentDate: true, amountPaid: true, paymentMethod: true } },
         },
         orderBy: [{ billingMonth: 'desc' }, { createdAt: 'desc' }],
       }),
       db.receipt.findMany({
         orderBy: { paymentDate: 'desc' },
-        include: {
-          monthlyPayment: {
-            include: { resident: true, room: true },
-          },
+        select: {
+          id: true,
+          receiptNumber: true,
+          residentName: true,
+          roomNumber: true,
+          billingMonth: true,
+          amountPaid: true,
+          paymentMethod: true,
+          paymentDate: true,
+          googleDriveFileId: true,
+          receiptFileName: true,
+          generatedBy: true,
+          notes: true,
         },
       }),
-      db.hostelSettings.findUnique({ where: { id: 'default' } }),
+      getCachedHostelSettings(),
     ]);
 
     // 1. RESIDENT REPORT

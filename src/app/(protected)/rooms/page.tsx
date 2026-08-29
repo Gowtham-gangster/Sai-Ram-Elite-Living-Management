@@ -653,7 +653,7 @@ export default function RoomsPage() {
                   Rent & Payment Management
                 </label>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Disable this option for rooms that are not part of the hostel's rent collection system (e.g. owner, staff, or complimentary rooms).
+                  Disable this option for rooms that are not part of the hostel&apos;s rent collection system (e.g. owner, staff, or complimentary rooms).
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer shrink-0">

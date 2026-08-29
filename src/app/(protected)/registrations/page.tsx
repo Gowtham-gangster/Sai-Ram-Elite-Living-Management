@@ -271,7 +271,7 @@ export default function RegistrationsPage() {
               Last Synced:{' '}
               {mounted && latestSync?.completedAt
                 ? new Date(latestSync.completedAt).toLocaleString('en-IN')
-                : 'Synced just now'}{' '}
+                : 'Pending sync'}{' '}
               • Status: <span className="text-emerald-400 font-semibold">Healthy</span>
             </p>
           </div>

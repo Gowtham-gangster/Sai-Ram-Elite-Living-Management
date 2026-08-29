@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     if (floor && floor !== 'ALL') where.floor = parseInt(floor, 10);
     if (status && status !== 'ALL') where.status = status;
     if (search) {
-      where.roomNumber = { contains: search };
+      where.roomNumber = { contains: search, mode: 'insensitive' };
     }
 
     const rooms = await db.room.findMany({

@@ -78,13 +78,17 @@ export default function ReceiptsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="p-5 rounded-3xl bg-slate-900/80 border border-slate-800">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Receipts Issued</div>
-          <div className="text-3xl font-black text-white mt-1">{summary.totalReceiptsCount}</div>
+          <div className="text-3xl font-black text-white mt-1">
+            {isLoading ? <div className="h-9 w-20 bg-slate-800 rounded-lg animate-pulse mt-1" /> : summary.totalReceiptsCount}
+          </div>
           <div className="text-[11px] text-slate-400 mt-1">Official numbered invoices generated</div>
         </div>
 
         <div className="p-5 rounded-3xl bg-slate-900/80 border border-slate-800">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Collections Verified</div>
-          <div className="text-3xl font-black text-emerald-400 mt-1">{formatCurrency(summary.totalCollectedAmount)}</div>
+          <div className="text-3xl font-black text-emerald-400 mt-1">
+            {isLoading ? <div className="h-9 w-28 bg-slate-800 rounded-lg animate-pulse mt-1" /> : formatCurrency(summary.totalCollectedAmount)}
+          </div>
           <div className="text-[11px] text-slate-400 mt-1">Across all verified receipt payments</div>
         </div>
       </div>
@@ -111,7 +115,12 @@ export default function ReceiptsPage() {
           </form>
         </div>
 
-        {receipts.length === 0 ? (
+        {isLoading ? (
+          <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+            <RefreshCw className="w-6 h-6 animate-spin text-amber-400" />
+            <span>Loading receipt vouchers...</span>
+          </div>
+        ) : receipts.length === 0 ? (
           <div className="py-12 text-center space-y-2 bg-slate-950/40 rounded-2xl border border-slate-800/60">
             <Receipt className="w-10 h-10 text-slate-600 mx-auto" />
             <h3 className="text-xs font-bold text-slate-300">No receipts available yet</h3>

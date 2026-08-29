@@ -22,56 +22,57 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        { resident: { fullName: { contains: search } } },
+        { resident: { fullName: { contains: search, mode: 'insensitive' } } },
         { resident: { phone: { contains: search } } },
-        { messageText: { contains: search } },
+        { messageText: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    const reminders = await db.paymentReminder.findMany({
-      where,
-      orderBy: { scheduledFor: 'desc' },
-      include: {
-        resident: {
-          select: {
-            id: true,
-            fullName: true,
-            phone: true,
-            alternatePhone: true,
-            room: { select: { roomNumber: true, floor: true } },
+    const [reminders, unpaidPayments] = await Promise.all([
+      db.paymentReminder.findMany({
+        where,
+        orderBy: { scheduledFor: 'desc' },
+        include: {
+          resident: {
+            select: {
+              id: true,
+              fullName: true,
+              phone: true,
+              alternatePhone: true,
+              room: { select: { roomNumber: true, floor: true } },
+            },
+          },
+          monthlyPayment: {
+            select: {
+              id: true,
+              billingMonth: true,
+              totalAmountDue: true,
+              dueDate: true,
+              status: true,
+            },
           },
         },
-        monthlyPayment: {
-          select: {
-            id: true,
-            billingMonth: true,
-            totalAmountDue: true,
-            dueDate: true,
-            status: true,
+      }),
+      db.monthlyPayment.findMany({
+        where: {
+          status: { in: ['PENDING', 'OVERDUE', 'SUBMITTED'] },
+        },
+        include: {
+          resident: {
+            select: { id: true, fullName: true, phone: true, alternatePhone: true },
+          },
+          room: {
+            select: { id: true, roomNumber: true, floor: true, paymentEnabled: true },
+          },
+          reminders: {
+            orderBy: { sequence: 'desc' },
           },
         },
-      },
-    });
+        orderBy: { dueDate: 'asc' },
+      }),
+    ]);
 
-    // 2. Fetch candidates with pending / upcoming / overdue dues
     const now = new Date();
-    const unpaidPayments = await db.monthlyPayment.findMany({
-      where: {
-        status: { in: ['PENDING', 'OVERDUE', 'SUBMITTED'] },
-      },
-      include: {
-        resident: {
-          select: { id: true, fullName: true, phone: true, alternatePhone: true },
-        },
-        room: {
-          select: { id: true, roomNumber: true, floor: true, paymentEnabled: true },
-        },
-        reminders: {
-          orderBy: { sequence: 'desc' },
-        },
-      },
-      orderBy: { dueDate: 'asc' },
-    });
 
     const candidates = unpaidPayments.map((p) => {
       const isOverdue = p.status === 'OVERDUE' || new Date(p.dueDate) < now;
