@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getOwnerUpiConfig } from '@/lib/payments/paymentConfig';
+import { PaymentSessionService } from '@/lib/payments/paymentSessionService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,20 +13,6 @@ export async function POST(request: NextRequest) {
 
     const validApps = ['gpay', 'phonepe', 'paytm'];
     const selectedApp = validApps.includes(upiApp) ? upiApp : 'gpay';
-
-    // 1. Fetch Owner UPI Settings from central server configuration
-    let upiConfig;
-    try {
-      upiConfig = await getOwnerUpiConfig();
-    } catch (configError) {
-      console.error('Owner UPI configuration missing or invalid:', configError);
-      return NextResponse.json(
-        { error: 'Payment configuration is currently unavailable. Please try again later.' },
-        { status: 503 }
-      );
-    }
-
-    const { upiId, payeeName } = upiConfig;
 
     // 1. Fetch Monthly Payment strictly from database
     const payment = await prisma.monthlyPayment.findUnique({
@@ -88,7 +74,11 @@ export async function POST(request: NextRequest) {
       if (parsedAmount > remainingBalance + 0.01) {
         return NextResponse.json(
           {
-            error: `Payment amount (₹${parsedAmount.toLocaleString('en-IN')}) cannot exceed the remaining balance of ₹${remainingBalance.toLocaleString('en-IN')}.`,
+            error: `Payment amount (₹${parsedAmount.toLocaleString(
+              'en-IN'
+            )}) cannot exceed the remaining balance of ₹${remainingBalance.toLocaleString(
+              'en-IN'
+            )}.`,
           },
           { status: 400 }
         );
@@ -97,79 +87,50 @@ export async function POST(request: NextRequest) {
       amount = parsedAmount;
     }
 
-    // 3. Generate Unique Transaction Reference ID
-    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const txnRef = `SRL_${payment.billingMonth.replace('-', '')}_${payment.room.roomNumber}_${Date.now().toString(36).toUpperCase()}_${randomSuffix}`;
-    const transactionNote = `Rent ${payment.billingMonth} Room ${payment.room.roomNumber}`;
-
-    // 4. Construct Single Canonical Standard UPI URI
-    const queryParams = new URLSearchParams({
-      pa: upiId,
-      pn: payeeName,
-      am: amount.toFixed(2),
-      cu: 'INR',
-      tn: transactionNote,
-      tr: txnRef,
+    // 2. Delegate to unified PaymentSessionService (handles 10-min expiration, idempotency, unique reference, dynamic QR & Intent)
+    const session = await PaymentSessionService.createPaymentSession({
+      monthlyPaymentId: payment.id,
+      residentId: payment.residentId,
+      amount,
+      billingMonth: payment.billingMonth,
+      roomNumber: payment.room.roomNumber,
+      residentName: payment.resident.fullName,
+      preferredApp: selectedApp,
+      createdBy: 'RESIDENT',
     });
 
-    const queryString = queryParams.toString();
-    const standardUpiUrl = `upi://pay?${queryString}`;
-
-    // 5. Generate high-resolution QR Data URL using canonical UPI URI
-    let qrDataUrl = '';
-    try {
-      const QRCode = (await import('qrcode')).default;
-      qrDataUrl = await QRCode.toDataURL(standardUpiUrl, {
-        width: 320,
-        margin: 2,
-        color: {
-          dark: '#0F172A',
-          light: '#FFFFFF',
-        },
-        errorCorrectionLevel: 'M',
-      });
-    } catch (qrErr) {
-      console.error('Failed to generate QR Data URL:', qrErr);
-    }
-
-    // 6. Record Payment Initiation Record (PENDING_REVIEW - DOES NOT MARK PAID)
+    // 3. Record Payment Initiation Record (PENDING_REVIEW - DOES NOT MARK PAID)
     await prisma.paymentRecord.create({
       data: {
         monthlyPaymentId: payment.id,
         residentId: payment.residentId,
         amountPaid: amount,
         paymentMethod: 'UPI',
-        transactionReference: txnRef,
+        transactionReference: session.transactionReference,
         status: 'PENDING_REVIEW',
-        notes: `UPI payment initiated via ${selectedApp.toUpperCase()} by resident on /pay`,
-      },
-    });
-
-    // Optionally update MonthlyPayment transactionReference without changing status to PAID
-    await prisma.monthlyPayment.update({
-      where: { id: payment.id },
-      data: {
-        transactionReference: txnRef,
-        paymentMethod: 'UPI',
+        notes: `UPI payment initiated via ${selectedApp.toUpperCase()} by resident on /pay (Session: ${session.paymentSessionId})`,
       },
     });
 
     return NextResponse.json({
       success: true,
-      referenceId: txnRef,
-      payeeName,
-      upiId,
-      amount,
+      referenceId: session.transactionReference,
+      paymentSessionId: session.paymentSessionId,
+      payeeName: session.payeeName,
+      upiId: session.upiId,
+      amount: session.amount,
       billingMonth: payment.billingMonth,
       roomNumber: payment.room.roomNumber,
       residentName: payment.resident.fullName,
-      standardUpiUrl,
-      upiUri: standardUpiUrl,
-      appIntentUrl: standardUpiUrl,
-      gpayUrl: standardUpiUrl,
-      phonepeUrl: standardUpiUrl,
-      paytmUrl: standardUpiUrl,
-      qrDataUrl,
+      standardUpiUrl: session.standardUpiUrl,
+      upiUri: session.standardUpiUrl,
+      appIntentUrl: session.appIntentUrl,
+      gpayUrl: session.gpayUrl,
+      phonepeUrl: session.phonepeUrl,
+      paytmUrl: session.paytmUrl,
+      qrDataUrl: session.qrDataUrl,
+      expiresAt: session.expiresAt,
+      timeoutSeconds: session.timeoutSeconds,
       selectedApp,
     });
   } catch (error: any) {

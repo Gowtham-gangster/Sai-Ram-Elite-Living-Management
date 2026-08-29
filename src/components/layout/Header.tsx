@@ -49,8 +49,8 @@ export function Header({ onMenuToggle }: HeaderProps) {
           <span className="font-semibold text-slate-200">
             {profile?.full_name || 'Administrator'}
           </span>
-          <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase">
-            {role || 'OWNER'}
+          <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase tracking-wider">
+            {role?.replace('_', ' ') || 'SUPER ADMIN'}
           </span>
         </div>
 

@@ -1,17 +1,12 @@
 import { prisma } from '@/lib/prisma';
-
-export interface OwnerUpiConfig {
-  upiId: string;
-  payeeName: string;
-}
+import { OwnerUpiConfig, PaymentServerConfig } from './types';
 
 /**
- * Basic UPI ID format validator (e.g. username@bankhandle, min 3 chars before @, valid bank suffix)
+ * Basic UPI ID format validator (e.g. username@bankhandle, min 2 chars before @, valid bank suffix)
  */
 export function isValidUpiIdFormat(upiId: string): boolean {
   if (!upiId || typeof upiId !== 'string') return false;
   const trimmed = upiId.trim();
-  // Valid UPI IDs must have an '@', reasonable length (3 to 256), and valid characters
   const upiRegex = /^[a-zA-Z0-9.\-_]{2,128}@[a-zA-Z0-9.\-_]{2,64}$/;
   return upiRegex.test(trimmed);
 }
@@ -66,5 +61,54 @@ export async function getOwnerUpiConfig(): Promise<OwnerUpiConfig> {
   return {
     upiId,
     payeeName,
+  };
+}
+
+/**
+ * Centralized Server-Side Payment Configuration
+ * Prepares support for future Adarsh Bank merchant parameters without requiring fake values.
+ * Safe fallback to personal UPI is always guaranteed.
+ */
+export async function getPaymentServerConfig(): Promise<PaymentServerConfig> {
+  const ownerUpi = await getOwnerUpiConfig();
+
+  const provider = process.env.PAYMENT_PROVIDER?.trim() || 'PERSONAL_UPI_FALLBACK';
+  
+  const timeoutMinutesRaw = parseInt(process.env.PAYMENT_SESSION_TIMEOUT_MINUTES || '10', 10);
+  const timeoutMinutes = isNaN(timeoutMinutesRaw) || timeoutMinutesRaw <= 0 ? 10 : timeoutMinutesRaw;
+
+  const statusEnabled = process.env.PAYMENT_STATUS_ENABLED !== 'false';
+  const intentEnabled = process.env.PAYMENT_INTENT_ENABLED !== 'false';
+  const dynamicQrEnabled = process.env.PAYMENT_DYNAMIC_QR_ENABLED !== 'false';
+
+  // Future merchant configuration values (will be active only if configured)
+  const merchantUpiId = process.env.MERCHANT_UPI_ID?.trim();
+  const merchantUpiName = process.env.MERCHANT_UPI_NAME?.trim();
+  const merchantMcc = process.env.MERCHANT_MCC?.trim();
+  const merchantId = process.env.MERCHANT_ID?.trim();
+  const terminalId = process.env.TERMINAL_ID?.trim();
+  const apiBaseUrl = process.env.PAYMENT_API_BASE_URL?.trim();
+  const apiKey = process.env.PAYMENT_API_KEY?.trim();
+  const apiSecret = process.env.PAYMENT_API_SECRET?.trim();
+  const webhookSecret = process.env.PAYMENT_WEBHOOK_SECRET?.trim();
+
+  return {
+    provider,
+    timeoutMinutes,
+    statusEnabled,
+    intentEnabled,
+    dynamicQrEnabled,
+    ownerUpi,
+    merchantConfig: {
+      merchantUpiId,
+      merchantUpiName,
+      merchantMcc,
+      merchantId,
+      terminalId,
+      apiBaseUrl,
+      apiKey,
+      apiSecret,
+      webhookSecret,
+    },
   };
 }

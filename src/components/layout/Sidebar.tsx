@@ -49,8 +49,8 @@ export function Sidebar({ onNavClick, mobileOpen, onCloseMobile }: SidebarProps)
     <aside className="w-64 bg-slate-950/95 border-r border-slate-800/80 flex flex-col h-full select-none">
       {/* Brand Header */}
       <div className="p-5 border-b border-slate-800/80 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
-          <DoorOpen className="w-5 h-5 text-slate-950 font-bold" />
+        <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg p-0.5 overflow-hidden shrink-0">
+          <img src="/logo.png" alt="Sai Ram Hostel Logo" className="w-full h-full object-contain" />
         </div>
         <div>
           <h1 className="font-extrabold text-white text-sm tracking-wide leading-tight">
@@ -105,8 +105,8 @@ export function Sidebar({ onNavClick, mobileOpen, onCloseMobile }: SidebarProps)
               <p className="text-xs font-bold text-slate-200 truncate">
                 {profile?.full_name || 'Administrator'}
               </p>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wider">
-                {role || 'OWNER'}
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wider inline-block">
+                {role?.replace('_', ' ') || 'SUPER ADMIN'}
               </span>
             </div>
           </div>

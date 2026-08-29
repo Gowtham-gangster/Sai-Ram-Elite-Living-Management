@@ -12,7 +12,6 @@ import {
   Shield,
   CreditCard,
   QrCode,
-  Copy,
   Check,
   ExternalLink,
   Loader2,
@@ -53,6 +52,7 @@ interface PaymentData {
 
 interface InitiationResult {
   referenceId: string;
+  paymentSessionId?: string;
   payeeName: string;
   upiId: string;
   amount: number;
@@ -65,6 +65,8 @@ interface InitiationResult {
   phonepeIntentUrl?: string;
   paytmIntentUrl?: string;
   qrDataUrl?: string;
+  expiresAt?: string;
+  timeoutSeconds?: number;
   selectedApp: string;
 }
 
@@ -92,7 +94,10 @@ export default function ResidentPaymentPortal() {
   // UPI Initiation & Verification State
   const [isInitiating, setIsInitiating] = useState(false);
   const [initiationResult, setInitiationResult] = useState<InitiationResult | null>(null);
-  const [copiedUpi, setCopiedUpi] = useState(false);
+
+  // Unified Payment Session Timer State (10-minute authoritative expiration)
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(600);
+  const [isSessionExpired, setIsSessionExpired] = useState<boolean>(false);
 
   // Polling State for Server Verification
   const [isPolling, setIsPolling] = useState(false);
@@ -200,6 +205,31 @@ export default function ResidentPaymentPortal() {
 
     return () => clearInterval(intervalId);
   }, [screen, initiationResult?.referenceId]);
+
+  // Unified Payment Session Timer Effect (10-minute authoritative countdown)
+  useEffect(() => {
+    if (screen !== 4 || !initiationResult?.expiresAt) return;
+
+    const updateTimer = () => {
+      const expiresTime = new Date(initiationResult.expiresAt!).getTime();
+      const now = Date.now();
+      const diff = Math.max(0, Math.floor((expiresTime - now) / 1000));
+      setSecondsRemaining(diff);
+      if (diff <= 0) {
+        setIsSessionExpired(true);
+      }
+    };
+
+    updateTimer();
+    const timerInterval = setInterval(updateTimer, 1000);
+    return () => clearInterval(timerInterval);
+  }, [screen, initiationResult?.expiresAt]);
+
+  const formatCountdown = (totalSeconds: number): string => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
 
   const handleManualCheck = async () => {
     if (!initiationResult?.referenceId) return;
@@ -324,12 +354,6 @@ export default function ResidentPaymentPortal() {
     }
   };
 
-  const handleCopyUpiId = (upiId: string) => {
-    navigator.clipboard.writeText(upiId);
-    setCopiedUpi(true);
-    setTimeout(() => setCopiedUpi(false), 2500);
-  };
-
   // Launch UPI app using canonical standard UPI protocol
   const handleLaunchUpiApp = (_appType: 'gpay' | 'phonepe' | 'paytm') => {
     if (!initiationResult) return;
@@ -376,8 +400,8 @@ export default function ResidentPaymentPortal() {
         <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3.5" suppressHydrationWarning>
           <div className="max-w-md mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                <Building2 className="w-4 h-4 text-slate-950" />
+              <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg p-0.5 overflow-hidden shrink-0">
+                <img src="/logo.png" alt="Sai Ram Hostel Logo" className="w-full h-full object-contain" />
               </div>
               <div>
                 <h1 className="text-xs font-black tracking-wider uppercase text-white">SAIRAM ELITE LIVING</h1>
@@ -388,8 +412,8 @@ export default function ResidentPaymentPortal() {
         </header>
         <main className="max-w-md w-full mx-auto px-4 py-6 flex-1 flex flex-col justify-center" suppressHydrationWarning>
           <div className="space-y-6 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-3">
-              <Phone className="w-6 h-6 text-amber-400" />
+            <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto mb-3 shadow-xl p-1 overflow-hidden">
+              <img src="/logo.png" alt="Sai Ram Hostel Logo" className="w-full h-full object-contain" />
             </div>
             <h2 className="text-xl font-black text-white">Rent Payment</h2>
             <p className="text-xs text-slate-400">Loading secure portal...</p>
@@ -411,8 +435,8 @@ export default function ResidentPaymentPortal() {
       <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3.5" suppressHydrationWarning>
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-              <Building2 className="w-4 h-4 text-slate-950" />
+            <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg p-0.5 overflow-hidden shrink-0">
+              <img src="/logo.png" alt="Sai Ram Hostel Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h1 className="text-xs font-black tracking-wider uppercase text-white">
@@ -485,9 +509,9 @@ export default function ResidentPaymentPortal() {
             {/* SCREEN 1: Mobile Number Input */}
             {screen === 1 && (
               <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-                <div className="text-center space-y-1.5">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-3 shadow-inner">
-                    <Phone className="w-6 h-6" />
+                <div className="text-center space-y-2">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto mb-2 shadow-xl p-1 overflow-hidden">
+                    <img src="/logo.png" alt="Sai Ram Hostel Logo" className="w-full h-full object-contain" />
                   </div>
                   <h2 className="text-xl font-black text-white">Rent Payment</h2>
                   <p className="text-xs text-slate-400">
@@ -790,7 +814,10 @@ export default function ResidentPaymentPortal() {
               <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
                 <button
                   type="button"
-                  onClick={() => setScreen(3)}
+                  onClick={() => {
+                    setIsSessionExpired(false);
+                    setScreen(3);
+                  }}
                   className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
@@ -802,10 +829,33 @@ export default function ResidentPaymentPortal() {
                   <p className="text-xs text-slate-400">Choose your preferred UPI payment method or scan & pay</p>
                 </div>
 
-                {/* Summary Pill */}
-                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between font-bold">
-                  <span>Paying: ₹{initiationResult.amount.toLocaleString('en-IN')}</span>
-                  <span className="text-[11px] font-semibold text-slate-400">Room {resident.roomNumber}</span>
+                {/* Summary Pill & Session Countdown Timer */}
+                <div className="space-y-2">
+                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between font-bold">
+                    <span>Paying: ₹{initiationResult.amount.toLocaleString('en-IN')}</span>
+                    <span className="text-[11px] font-semibold text-slate-400">Room {resident.roomNumber}</span>
+                  </div>
+
+                  {/* Real-Time Authoritative Countdown Badge */}
+                  <div className="p-2.5 px-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-slate-300 font-semibold">
+                      <Clock
+                        className={`w-3.5 h-3.5 ${
+                          secondsRemaining < 120 ? 'text-rose-400 animate-pulse' : 'text-amber-400'
+                        }`}
+                      />
+                      <span>Payment Session</span>
+                    </div>
+                    <span
+                      className={`font-mono font-bold text-xs ${
+                        secondsRemaining < 120 ? 'text-rose-400' : 'text-amber-300'
+                      }`}
+                    >
+                      {secondsRemaining > 0
+                        ? `Expires in ${formatCountdown(secondsRemaining)}`
+                        : 'Session Expired'}
+                    </span>
+                  </div>
                 </div>
 
                 {error && (
@@ -815,57 +865,61 @@ export default function ResidentPaymentPortal() {
                   </div>
                 )}
 
-                {/* ========================================================================= */}
-                {/* 1. DIRECT QR CODE SECTION (Scan & Pay immediately visible) */}
-                {/* ========================================================================= */}
-                <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 text-center space-y-3.5 shadow-xl">
-                  <div className="space-y-0.5">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider">
-                      <QrCode className="w-4 h-4" />
-                      <span>Scan & Pay</span>
+                {/* EXPIRED SESSION STATE */}
+                {isSessionExpired ? (
+                  <div className="p-6 rounded-3xl bg-slate-900 border border-rose-500/30 text-center space-y-4 shadow-xl animate-in zoom-in-95 duration-200">
+                    <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto shadow-inner">
+                      <Clock className="w-7 h-7" />
                     </div>
-                    <p className="text-[11px] text-slate-400">
-                      Scan this QR code using any UPI app to pay
-                    </p>
-                  </div>
-
-                  {/* High-Resolution Clean QR Code Box */}
-                  <div className="bg-white p-3 rounded-2xl w-60 h-60 mx-auto flex items-center justify-center shadow-lg border border-slate-700">
-                    <img
-                      src={
-                        initiationResult.qrDataUrl ||
-                        `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-                          initiationResult.standardUpiUrl
-                        )}`
-                      }
-                      alt="UPI Payment QR Code"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-
-                  {/* Payee Info & Copy UPI ID Button */}
-                  <div className="flex items-center justify-between text-xs bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
-                    <div className="space-y-0.5 text-left">
-                      <span className="text-[10px] text-slate-500 block">Hostel UPI ID</span>
-                      <span className="font-mono text-amber-300 font-bold text-xs">
-                        {initiationResult.upiId}
-                      </span>
+                    <div className="space-y-1.5">
+                      <h3 className="text-base font-black text-white">Payment Session Expired</h3>
+                      <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+                        This 10-minute payment session has expired for security. Please start a new payment session to complete your transfer.
+                      </p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleCopyUpiId(initiationResult.upiId)}
-                      className="p-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 text-[11px] font-semibold transition-colors"
-                      title="Copy UPI ID"
+                      onClick={() => {
+                        setIsSessionExpired(false);
+                        setInitiationResult(null);
+                        setScreen(3);
+                      }}
+                      className="w-full py-3.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all active:scale-[0.98]"
                     >
-                      {copiedUpi ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                      <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
+                      <RefreshCw className="w-4 h-4 text-slate-950" />
+                      <span>Start New Payment</span>
                     </button>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {/* ========================================================================= */}
+                    {/* 1. DIRECT QR CODE SECTION (Scan & Pay immediately visible) */}
+                    {/* ========================================================================= */}
+                    <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 text-center space-y-3.5 shadow-xl">
+                      <div className="space-y-0.5">
+                        <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider">
+                          <QrCode className="w-4 h-4" />
+                          <span>Scan & Pay</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400">
+                          Scan this QR code using any UPI app to pay
+                        </p>
+                      </div>
+
+                      {/* High-Resolution Clean QR Code Box */}
+                      <div className="bg-white p-3 rounded-2xl w-60 h-60 mx-auto flex items-center justify-center shadow-lg border border-slate-700">
+                        <img
+                          src={
+                            initiationResult.qrDataUrl ||
+                            `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                              initiationResult.standardUpiUrl
+                            )}`
+                          }
+                          alt="UPI Payment QR Code"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    </div>
 
                 {/* ========================================================================= */}
                 {/* 2. CHOOSE UPI APP SECTION (Google Pay, PhonePe, Paytm) */}
@@ -972,7 +1026,7 @@ export default function ResidentPaymentPortal() {
                     type="button"
                     onClick={handleManualCheck}
                     disabled={isPolling}
-                    className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-750 text-slate-200 font-semibold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                    className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-755 text-slate-200 font-semibold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-colors"
                   >
                     {isPolling ? (
                       <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
@@ -982,8 +1036,10 @@ export default function ResidentPaymentPortal() {
                     <span>Check Payment Status Now</span>
                   </button>
                 </div>
-              </div>
+              </>
             )}
+          </div>
+        )}
 
             {/* SCREEN 6: Payment Verified & Confirmed (SUCCESS) */}
             {screen === 6 && (

@@ -6,20 +6,22 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seeding for SAIRAM ELITE LIVING...');
 
-  // 1. Create Default Admin User
-  const passwordHash = await bcrypt.hash('admin123', 10);
+  // 1. Create Default Admin User (reads from environment if supplied)
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@sairam.com').toLowerCase().trim();
+  const adminPassword = process.env.ADMIN_PASSWORD || 'ChangeMeImmediately123!';
+  const passwordHash = await bcrypt.hash(adminPassword, 10);
   const admin = await prisma.adminUser.upsert({
-    where: { email: 'admin@sairam.com' },
+    where: { email: adminEmail },
     update: {},
     create: {
-      name: 'System Administrator',
-      email: 'admin@sairam.com',
+      name: process.env.ADMIN_NAME || 'System Administrator',
+      email: adminEmail,
       passwordHash: passwordHash,
       role: 'SUPER_ADMIN',
       isActive: true,
     },
   });
-  console.log('✅ Admin user created:', admin.email);
+  console.log('✅ Admin user provisioned:', admin.email);
 
   // 2. Create Default Hostel Settings
   const settings = await prisma.hostelSettings.upsert({

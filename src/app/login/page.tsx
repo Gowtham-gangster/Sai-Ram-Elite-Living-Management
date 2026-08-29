@@ -22,8 +22,8 @@ function LoginFormContent() {
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
   const { refreshProfile } = useAuth();
 
-  const [email, setEmail] = useState('admin@sairam.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -67,12 +67,6 @@ function LoginFormContent() {
     }
   };
 
-  const fillDefaultCredentials = () => {
-    setEmail('admin@sairam.com');
-    setPassword('admin123');
-    setErrorMessage(null);
-  };
-
   return (
     <form onSubmit={handleLogin} className="space-y-4" noValidate>
       {/* Error Alert Message */}
@@ -104,7 +98,7 @@ function LoginFormContent() {
             type="email"
             autoComplete="email"
             required
-            placeholder="admin@sairam.com"
+            placeholder="Enter administrator email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/80 rounded-2xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all font-medium"
@@ -172,23 +166,6 @@ function LoginFormContent() {
           )}
         </button>
       </div>
-
-      {/* Quick Auto-fill for Administrator */}
-      <div className="pt-3 border-t border-slate-800/80 text-center">
-        <div className="inline-flex items-center gap-2 text-[11px] text-slate-400 bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-xl">
-          <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-          <span>Default: </span>
-          <span className="font-mono text-slate-200">admin@sairam.com</span> /{' '}
-          <span className="font-mono text-slate-200">admin123</span>
-          <button
-            type="button"
-            onClick={fillDefaultCredentials}
-            className="text-amber-400 hover:underline font-semibold ml-1 cursor-pointer"
-          >
-            Auto-fill
-          </button>
-        </div>
-      </div>
     </form>
   );
 }
@@ -204,8 +181,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6 relative z-10">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-xl shadow-amber-500/25 border border-amber-300/30">
-            <DoorOpen className="w-8 h-8 text-slate-950 font-black" />
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center shadow-2xl p-1 overflow-hidden">
+            <img src="/logo.png" alt="Sai Ram Hostel Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">
             SAIRAM ELITE LIVING

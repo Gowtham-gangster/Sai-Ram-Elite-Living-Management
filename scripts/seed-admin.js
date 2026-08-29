@@ -5,10 +5,16 @@ const prisma = new PrismaClient();
 
 async function main() {
   const args = process.argv.slice(2);
-  const email = (args[0] || 'admin@sairam.com').toLowerCase().trim();
-  const name = args[1] || 'System Administrator';
-  const password = args[2] || 'admin123';
-  const role = args[3] || 'SUPER_ADMIN';
+  const email = (args[0] || process.env.ADMIN_EMAIL || '').toLowerCase().trim();
+  const name = args[1] || process.env.ADMIN_NAME || 'Authorized Administrator';
+  const password = args[2] || process.env.ADMIN_PASSWORD || '';
+  const role = args[3] || process.env.ADMIN_ROLE || 'SUPER_ADMIN';
+
+  if (!email || !password) {
+    console.error('❌ Error: Email and password must be supplied via CLI arguments or environment variables (ADMIN_EMAIL, ADMIN_PASSWORD).');
+    console.error('Usage: node scripts/seed-admin.js <email> <name> <password> [role]');
+    process.exit(1);
+  }
 
   console.log(`\n--- Provisioning Administrator Account: ${email} ---`);
 
@@ -30,6 +36,8 @@ async function main() {
       isActive: true,
     },
   });
+
+  console.log(`✓ Successfully provisioned ${admin.role}: ${admin.email}`);
 
   // Ensure default hostel settings exist
   await prisma.hostelSettings.upsert({

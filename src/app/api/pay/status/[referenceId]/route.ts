@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { PaymentSessionService } from '@/lib/payments/paymentSessionService';
 
 export async function GET(
   request: NextRequest,
@@ -14,7 +15,13 @@ export async function GET(
 
     const cleanRef = referenceId.trim();
 
-    // Query MonthlyPayment by transactionReference or ID
+    // 1. Check if matching PaymentSession exists to determine authoritative expiration
+    const sessionStatus = await PaymentSessionService.getSessionStatus(cleanRef);
+    if (sessionStatus.found) {
+      return NextResponse.json(sessionStatus);
+    }
+
+    // 2. Fallback query for MonthlyPayment directly
     const payment = await prisma.monthlyPayment.findFirst({
       where: {
         OR: [
@@ -79,10 +86,12 @@ export async function GET(
       isPaid,
       isPartiallyPaid,
       isPending: payment.status === 'PENDING',
+      isExpired: false,
       billingMonth: payment.billingMonth,
       roomNumber: payment.resident.room?.roomNumber || 'N/A',
       residentName: payment.resident.fullName,
       totalAmountDue: totalDue,
+      amount: totalDue,
       amountPaid: totalVerifiedPaid,
       remainingBalance,
       paidDate: payment.paidDate ? payment.paidDate.toISOString() : null,

@@ -5,6 +5,11 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'SAIRAM ELITE LIVING — Hostel Management System',
   description: 'Private administrative system for managing rooms, residents, payments, and operations.',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 import { AuthProvider } from '@/context/AuthContext';
@@ -19,6 +24,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
+        <link rel="icon" href="/logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

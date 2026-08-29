@@ -83,6 +83,7 @@ model Resident {
   
   monthlyPayments       MonthlyPayment[]
   paymentRecords        PaymentRecord[]
+  paymentSessions       PaymentSession[]
   receipts              Receipt[]
   reminders             PaymentReminder[]
   roomChangeRequests    RoomChangeRequest[]
@@ -196,6 +197,7 @@ model MonthlyPayment {
   paymentRecords       PaymentRecord[]
   receipts             Receipt[]
   reminders            PaymentReminder[]
+  paymentSessions      PaymentSession[]
 
   @@unique([residentId, billingMonth])
   @@index([residentId])
@@ -205,7 +207,38 @@ model MonthlyPayment {
   @@index([dueDate])
 }
 
-// 7. Payment Records Model
+// 7. Payment Sessions Model (Unified Architecture for QR & UPI Intent)
+model PaymentSession {
+  id                   String         @id @default(cuid())
+  monthlyPaymentId     String
+  monthlyPayment       MonthlyPayment @relation(fields: [monthlyPaymentId], references: [id], onDelete: Cascade)
+  residentId           String
+  resident             Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  
+  amount               Float
+  billingMonth         String
+  roomNumber           String
+  transactionReference String         @unique
+  status               String         @default("ACTIVE") // ACTIVE, PENDING_VERIFICATION, PAID, FAILED, EXPIRED, CANCELLED
+  paymentMethod        String         @default("UPI")    // UPI, GPAY, PHONEPE, PAYTM, etc.
+  provider             String         @default("PERSONAL_UPI_FALLBACK")
+  providerTransactionId String?
+  verificationStatus   String         @default("PENDING") // PENDING, VERIFIED, FAILED, NOT_AVAILABLE
+  verifiedAt           DateTime?
+  qrPayload            String?
+  expiresAt            DateTime
+  createdBy            String         @default("RESIDENT") // RESIDENT, ADMIN
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  @@index([transactionReference])
+  @@index([monthlyPaymentId])
+  @@index([residentId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// 8. Payment Records Model
 model PaymentRecord {
   id                   String         @id @default(cuid())
   monthlyPaymentId     String

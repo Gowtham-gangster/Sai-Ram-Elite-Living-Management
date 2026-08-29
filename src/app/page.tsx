@@ -21,8 +21,8 @@ export default function RootPage() {
 
   return (
     <div className="min-h-screen bg-[#090d16] flex flex-col items-center justify-center text-slate-400 text-xs gap-3">
-      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/20">
-        <DoorOpen className="w-6 h-6" />
+      <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center shadow-2xl p-1 overflow-hidden">
+        <img src="/logo.png" alt="Sai Ram Hostel Logo" className="w-full h-full object-contain" />
       </div>
       <div className="flex items-center gap-2 mt-2">
         <Loader2 className="w-4 h-4 animate-spin text-amber-400" />

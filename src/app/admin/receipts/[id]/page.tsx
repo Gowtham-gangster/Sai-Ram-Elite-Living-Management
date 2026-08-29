@@ -146,20 +146,29 @@ export default function SingleReceiptPage() {
         <div className="p-8 sm:p-12 space-y-8">
           {/* Header Banner */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b-2 border-slate-900 pb-6">
-            <div>
-              <div className="inline-block px-2.5 py-0.5 rounded bg-slate-900 text-amber-400 text-[10px] font-black uppercase tracking-wider mb-1.5">
-                Official Payment Receipt
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-slate-950 border border-slate-200 flex items-center justify-center p-1 shadow-md overflow-hidden shrink-0">
+                <img src="/logo.png" alt="Hostel Logo" className="w-full h-full object-contain" />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-                {hostelSettings?.hostelName || 'SAIRAM ELITE LIVING'}
-              </h1>
-              <p className="text-xs text-slate-600 max-w-md mt-1 leading-relaxed">
-                {hostelSettings?.hostelAddress || 'Plot #42, ITPL Main Road, Whitefield, Bengaluru - 560066'}
-              </p>
-              <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-500 mt-2">
-                <span>Phone: <strong>{hostelSettings?.contactPhone || '+91 98450 12345'}</strong></span>
-                <span>•</span>
-                <span>Email: <strong>{hostelSettings?.contactEmail || 'contact@sairameliteliving.com'}</strong></span>
+              <div>
+                <div className="inline-block px-2.5 py-0.5 rounded bg-slate-900 text-amber-400 text-[10px] font-black uppercase tracking-wider mb-1.5">
+                  Official Payment Receipt
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+                  {hostelSettings?.hostelName || 'SAIRAM ELITE LIVING'}
+                </h1>
+                <p className="text-[11px] font-bold text-amber-600 tracking-wide uppercase">
+                  PG & Boys Hostel
+                </p>
+                <p className="text-xs text-slate-600 max-w-md mt-1 leading-relaxed">
+                  {hostelSettings?.hostelAddress ||
+                    'Plot No. 57, Near Pragati Model High School, Beside Vibhu Park Apartment, Gandi Maisamma, Hyderabad, Telangana – 500043'}
+                </p>
+                <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-500 mt-2">
+                  <span>Phone: <strong>{hostelSettings?.contactPhone || '+91 8977339133, 918688535143'}</strong></span>
+                  <span>•</span>
+                  <span>Email: <strong>{hostelSettings?.contactEmail || 'sairameliteliving@gmail.com'}</strong></span>
+                </div>
               </div>
             </div>
 

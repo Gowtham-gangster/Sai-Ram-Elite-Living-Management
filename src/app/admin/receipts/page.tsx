@@ -494,16 +494,25 @@ export default function AdminReceiptsPage() {
             <div className="p-6 bg-slate-900 rounded-3xl border border-slate-800 space-y-6 text-slate-300">
               {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-800 pb-5">
-                <div>
-                  <h3 className="text-lg font-black text-white">
-                    {hostelSettings?.hostelName || 'SAIRAM ELITE LIVING'}
-                  </h3>
-                  <p className="text-[11px] text-slate-400 max-w-sm mt-0.5">
-                    {hostelSettings?.hostelAddress || 'Plot #42, ITPL Main Road, Whitefield, Bengaluru - 560066'}
-                  </p>
-                  <p className="text-[10px] text-slate-500 mt-1">
-                    Phone: {hostelSettings?.contactPhone || '+91 98450 12345'} • Email: {hostelSettings?.contactEmail || 'contact@sairameliteliving.com'}
-                  </p>
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center p-0.5 overflow-hidden shrink-0">
+                    <img src="/logo.png" alt="Hostel Logo" className="w-full h-full object-contain" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-white">
+                      {hostelSettings?.hostelName || 'SAIRAM ELITE LIVING'}
+                    </h3>
+                    <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wide">
+                      PG & Boys Hostel
+                    </p>
+                    <p className="text-[11px] text-slate-400 max-w-sm mt-0.5">
+                      {hostelSettings?.hostelAddress ||
+                        'Plot No. 57, Near Pragati Model High School, Beside Vibhu Park Apartment, Gandi Maisamma, Hyderabad, Telangana – 500043'}
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Phone: {hostelSettings?.contactPhone || '+91 8977339133, 918688535143'} • Email: {hostelSettings?.contactEmail || 'sairameliteliving@gmail.com'}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="text-right">

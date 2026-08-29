@@ -90,8 +90,10 @@ export async function GET(
       paymentMethod: receipt.paymentMethod,
       transactionReference: receipt.monthlyPayment?.transactionReference || receipt.notes,
       hostelName: hostelSettings?.hostelName || 'SAIRAM ELITE LIVING',
-      hostelAddress: hostelSettings?.hostelAddress || 'Plot #42, ITPL Main Road, Whitefield, Bengaluru - 560066',
-      contactPhone: hostelSettings?.contactPhone || '+91 86885 35143',
+      hostelAddress:
+        hostelSettings?.hostelAddress ||
+        'Plot No. 57, Near Pragati Model High School, Beside Vibhu Park Apartment, Gandi Maisamma, Hyderabad, Telangana – 500043',
+      contactPhone: hostelSettings?.contactPhone || '+91 8977339133, 918688535143',
     });
 
     const pdfBuffer = Buffer.from(freshPdfBytes);

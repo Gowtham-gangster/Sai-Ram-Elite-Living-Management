@@ -1,4 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import fs from 'fs';
+import path from 'path';
 
 export interface ReceiptPdfData {
   receiptNumber: string;
@@ -33,6 +35,24 @@ export async function generateReceiptPdf(data: ReceiptPdfData): Promise<Uint8Arr
   const borderGrey = rgb(0.89, 0.91, 0.94); // #E2E8F0
   const emeraldGreen = rgb(0.06, 0.65, 0.42); // #10B981
 
+  // Load and embed hostel logo if available
+  let logoImage: any = null;
+  try {
+    const possiblePaths = [
+      path.join(process.cwd(), 'public', 'logo.png'),
+      path.join(process.cwd(), 'Hostel logo.png'),
+    ];
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        const bytes = fs.readFileSync(p);
+        logoImage = await pdfDoc.embedPng(bytes);
+        break;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not embed logo image in receipt PDF:', err);
+  }
+
   // Outer decorative border
   page.drawRectangle({
     x: 24,
@@ -53,32 +73,66 @@ export async function generateReceiptPdf(data: ReceiptPdfData): Promise<Uint8Arr
     color: darkNavy,
   });
 
+  // Draw logo image in header if loaded
+  const textStartX = logoImage ? 124 : 48;
+  if (logoImage) {
+    page.drawImage(logoImage, {
+      x: 44,
+      y: height - 106,
+      width: 68,
+      height: 68,
+    });
+  }
+
   // Hostel Title
   const hostelTitle = data.hostelName || 'SAIRAM ELITE LIVING';
   page.drawText(hostelTitle, {
-    x: 48,
-    y: height - 68,
-    size: 20,
+    x: textStartX,
+    y: height - 58,
+    size: 17,
     font: fontBold,
     color: primaryGold,
   });
 
-  page.drawText('MANAGED HOSTEL & CO-LIVING RESIDENCES', {
-    x: 48,
-    y: height - 86,
-    size: 9,
+  page.drawText('PG & Boys Hostel', {
+    x: textStartX,
+    y: height - 73,
+    size: 9.5,
     font: fontBold,
     color: rgb(0.9, 0.9, 0.9),
   });
 
-  const addressText = data.hostelAddress || 'Plot #42, ITPL Main Road, Whitefield, Bengaluru - 560066';
-  page.drawText(addressText, {
-    x: 48,
-    y: height - 102,
-    size: 8,
-    font: fontRegular,
-    color: rgb(0.65, 0.7, 0.78),
-  });
+  const addressText =
+    data.hostelAddress ||
+    'Plot No. 57, Near Pragati Model High School, Beside Vibhu Park Apartment, Gandi Maisamma, Hyderabad, Telangana – 500043';
+
+  if (addressText.includes('Gandi Maisamma')) {
+    const parts = addressText.split('Gandi Maisamma');
+    const line1 = (parts[0] || '').replace(/,\s*$/, '');
+    const line2 = 'Gandi Maisamma' + (parts[1] || '');
+    page.drawText(line1, {
+      x: textStartX,
+      y: height - 87,
+      size: 7,
+      font: fontRegular,
+      color: rgb(0.65, 0.7, 0.78),
+    });
+    page.drawText(line2, {
+      x: textStartX,
+      y: height - 99,
+      size: 7,
+      font: fontRegular,
+      color: rgb(0.65, 0.7, 0.78),
+    });
+  } else {
+    page.drawText(addressText, {
+      x: textStartX,
+      y: height - 90,
+      size: 7.5,
+      font: fontRegular,
+      color: rgb(0.65, 0.7, 0.78),
+    });
+  }
 
   // RECEIPT BADGE (Top Right)
   page.drawRectangle({
@@ -279,91 +333,147 @@ export async function generateReceiptPdf(data: ReceiptPdfData): Promise<Uint8Arr
     color: primaryGold,
   });
 
-  // Verification & Stamp Area
-  const stampY = height - 520;
+  // Verification & Digital Authorization Area (Positioned safely below total amount row)
+  const stampY = nextRowY - 82;
+
+  // Left Verification Box
   page.drawRectangle({
     x: 48,
     y: stampY,
-    width: 220,
-    height: 60,
+    width: 235,
+    height: 64,
     color: rgb(0.94, 0.98, 0.95),
     borderColor: emeraldGreen,
     borderWidth: 1,
   });
 
-  page.drawText('VERIFIED PAYMENT CONFIRMATION', {
+  page.drawText('VERIFIED DIGITAL PAYMENT', {
     x: 58,
-    y: stampY + 42,
-    size: 7,
+    y: stampY + 46,
+    size: 8,
     font: fontBold,
     color: emeraldGreen,
   });
 
-  page.drawText('Digitally verified via Server-Side UPI Gateway', {
+  page.drawText('Digitally authenticated via Server Gateway', {
     x: 58,
-    y: stampY + 28,
+    y: stampY + 32,
     size: 7,
     font: fontRegular,
     color: darkNavy,
   });
 
+  page.drawText(`Ref: ${data.transactionReference || 'SRL_AUTHTXN'}`, {
+    x: 58,
+    y: stampY + 20,
+    size: 6.5,
+    font: fontRegular,
+    color: slateText,
+  });
+
   page.drawText(`Timestamp: ${new Date().toISOString()}`, {
     x: 58,
-    y: stampY + 14,
+    y: stampY + 9,
     size: 6,
     font: fontRegular,
     color: slateText,
   });
 
-  // Signature line
-  page.drawText('SAIRAM ELITE LIVING', {
-    x: width - 180,
-    y: stampY + 40,
-    size: 9,
+  // Right Authorization Badge
+  page.drawRectangle({
+    x: width - 268,
+    y: stampY,
+    width: 220,
+    height: 64,
+    color: lightBg,
+    borderColor: borderGrey,
+    borderWidth: 1,
+  });
+
+  page.drawText('ELECTRONIC AUTHORIZATION', {
+    x: width - 256,
+    y: stampY + 46,
+    size: 7.5,
     font: fontBold,
     color: darkNavy,
   });
 
-  page.drawText('Authorized Signatory', {
-    x: width - 180,
-    y: stampY + 25,
+  page.drawText('SAIRAM ELITE LIVING MANAGEMENT', {
+    x: width - 256,
+    y: stampY + 30,
     size: 8,
-    font: fontRegular,
-    color: slateText,
+    font: fontBold,
+    color: primaryGold,
   });
 
-  // Important Terms & Notice
-  const footerY = 80;
-  page.drawLine({
-    start: { x: 48, y: footerY + 30 },
-    end: { x: width - 48, y: footerY + 30 },
-    thickness: 0.5,
-    color: borderGrey,
-  });
-
-  page.drawText('1. This is a computer-generated official receipt and requires no physical signature.', {
-    x: 48,
-    y: footerY + 14,
+  page.drawText('Hostel Operations & Administration', {
+    x: width - 256,
+    y: stampY + 16,
     size: 7,
     font: fontRegular,
     color: slateText,
   });
 
-  page.drawText('2. Rent paid is strictly non-refundable and non-transferable under hostel management terms.', {
-    x: 48,
-    y: footerY + 4,
-    size: 7,
+  page.drawText('Official Verified Digital Document', {
+    x: width - 256,
+    y: stampY + 5,
+    size: 6.5,
     font: fontRegular,
     color: slateText,
   });
 
-  page.drawText(`Contact: ${data.contactPhone || '+91 86885 35143'} | Email: contact@sairameliteliving.com`, {
+  // Bottom Disclaimer & Terms Container
+  const footerY = Math.max(50, stampY - 72);
+  page.drawRectangle({
     x: 48,
-    y: footerY - 6,
-    size: 7,
+    y: footerY - 14,
+    width: width - 96,
+    height: 52,
+    color: lightBg,
+    borderColor: borderGrey,
+    borderWidth: 1,
+  });
+
+  page.drawText('DISCLAIMER & SYSTEM NOTICE:', {
+    x: 58,
+    y: footerY + 24,
+    size: 7.5,
     font: fontBold,
     color: darkNavy,
   });
+
+  page.drawText(
+    'This is a computer/system auto-generated digital receipt and requires NO physical signature or official stamp.',
+    {
+      x: 58,
+      y: footerY + 12,
+      size: 7.2,
+      font: fontBold,
+      color: primaryGold,
+    }
+  );
+
+  page.drawText(
+    'All transaction records are electronically verified and stored permanently in the hostel management records.',
+    {
+      x: 58,
+      y: footerY + 1,
+      size: 6.8,
+      font: fontRegular,
+      color: slateText,
+    }
+  );
+
+  page.drawText(
+    `Queries: ${data.contactPhone || '+91 8977339133, 918688535143'} | Email: contact@sairameliteliving.com`,
+    {
+      x: 58,
+      y: footerY - 9,
+      size: 6.8,
+      font: fontRegular,
+      color: darkNavy,
+    }
+  );
 
   return await pdfDoc.save();
 }
