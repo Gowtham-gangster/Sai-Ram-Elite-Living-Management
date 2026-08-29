@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
-import { createAuditLog } from '@/lib/audit';
+import {
+  getReminderScheduleForDueDate,
+  calculateEligibleReminderForToday,
+} from '@/lib/reminders/paymentReminderEngine';
 
 export async function GET(request: NextRequest) {
   try {
@@ -61,11 +64,10 @@ export async function GET(request: NextRequest) {
           select: { id: true, fullName: true, phone: true, alternatePhone: true },
         },
         room: {
-          select: { id: true, roomNumber: true, floor: true },
+          select: { id: true, roomNumber: true, floor: true, paymentEnabled: true },
         },
         reminders: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
+          orderBy: { sequence: 'desc' },
         },
       },
       orderBy: { dueDate: 'asc' },
@@ -79,6 +81,9 @@ export async function GET(request: NextRequest) {
       if (isOverdue) category = 'OVERDUE';
       else if (dueDaysDiff <= 3 && dueDaysDiff >= 0) category = 'DUE_SOON';
 
+      const reminderSchedule = getReminderScheduleForDueDate(new Date(p.dueDate), 6);
+      const eligibleToday = calculateEligibleReminderForToday(new Date(p.dueDate), now);
+
       return {
         paymentId: p.id,
         residentId: p.resident.id,
@@ -86,12 +91,20 @@ export async function GET(request: NextRequest) {
         phone: p.resident.phone,
         roomNumber: p.room.roomNumber,
         floor: p.room.floor,
+        paymentEnabled: p.room.paymentEnabled,
         billingMonth: p.billingMonth,
         amountDue: p.totalAmountDue,
         dueDate: p.dueDate,
         status: p.status,
         category,
         lastReminder: p.reminders[0] || null,
+        reminderSchedule,
+        eligibleToday,
+        scheduleStatus: p.room.paymentEnabled === false
+          ? 'Payment management disabled for this room'
+          : p.status === 'PAID'
+          ? 'Completed — Reminders stopped'
+          : 'Continues every 2 days until payment',
       };
     });
 
@@ -102,7 +115,7 @@ export async function GET(request: NextRequest) {
       candidates,
       summary: {
         total: allReminders.length,
-        scheduled: allReminders.filter((r) => r.status === 'SCHEDULED').length,
+        scheduled: allReminders.filter((r) => r.status === 'SCHEDULED' || r.status === 'PENDING').length,
         pending: allReminders.filter((r) => r.status === 'PENDING').length,
         sent: allReminders.filter((r) => r.status === 'SENT').length,
         failed: allReminders.filter((r) => r.status === 'FAILED').length,
@@ -177,21 +190,6 @@ export async function POST(request: NextRequest) {
       },
       include: {
         resident: { select: { fullName: true, phone: true } },
-      },
-    });
-
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: isScheduled ? 'SCHEDULE_REMINDER' : 'DISPATCH_REMINDER',
-      entityType: 'REMINDER',
-      entityId: reminder.id,
-      details: {
-        residentName: resident.fullName,
-        roomNumber: resident.room.roomNumber,
-        reminderType,
-        channel: channel || 'WHATSAPP',
-        status: reminder.status,
       },
     });
 

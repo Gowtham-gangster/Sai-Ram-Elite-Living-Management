@@ -43,19 +43,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const latestSync = await prisma.syncLog.findFirst({
-      orderBy: { startedAt: 'desc' },
-    });
-
     const totalRegistrations = await prisma.registration.count();
     const newRegistrations = await prisma.registration.count({
       where: { status: 'NEW' },
     });
 
     return NextResponse.json({
-      latestSync,
       totalRegistrations,
       newRegistrations,
+      checkedAt: new Date().toISOString(),
     });
   } catch (error: any) {
     return NextResponse.json(

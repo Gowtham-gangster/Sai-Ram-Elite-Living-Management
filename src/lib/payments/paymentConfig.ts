@@ -112,3 +112,18 @@ export async function getPaymentServerConfig(): Promise<PaymentServerConfig> {
     },
   };
 }
+
+/**
+ * Retrieves server-side bank settlement credentials configured in .env
+ */
+export function getBankSettlementConfig() {
+  return {
+    bankName: process.env.BANK_NAME || 'ICICI Bank',
+    accountHolderName: process.env.BANK_ACCOUNT_HOLDER || 'SAIRAM ELITE LIVING HOSPITALITY LLP',
+    accountNumber: process.env.BANK_ACCOUNT_NUMBER || '001122334455',
+    ifscCode: process.env.BANK_IFSC_CODE || 'ICIC0000011',
+    upiId: process.env.BANK_UPI_ID || process.env.OWNER_UPI_ID || 'sairamhostel@icici',
+    paymentInstructions: process.env.BANK_PAYMENT_INSTRUCTIONS || 'Transfer rent by the 5th. Mention room number in remarks.',
+  };
+}
+

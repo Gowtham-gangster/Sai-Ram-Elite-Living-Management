@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { RoomSchema } from '@/lib/validations';
-import { createAuditLog } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,10 +49,10 @@ export async function GET(request: NextRequest) {
         calculatedStatus = activeResidentsCount >= room.capacity ? 'FULL' : 'AVAILABLE';
       }
 
-      const monthlyCollection = room.residents.reduce(
-        (sum: number, r: any) => sum + (r.monthlyRent || 0),
-        0
-      );
+      const isPaymentManaged = room.paymentEnabled !== false;
+      const monthlyCollection = isPaymentManaged
+        ? room.residents.reduce((sum: number, r: any) => sum + (r.monthlyRent || 0), 0)
+        : 0;
 
       let parsedAmenities: string[] = [];
       try {
@@ -119,17 +118,9 @@ export async function POST(request: NextRequest) {
         sharingType: data.sharingType,
         amenities: JSON.stringify(data.amenities || []),
         status: data.status,
+        paymentEnabled: data.paymentEnabled !== undefined ? data.paymentEnabled : true,
         notes: data.notes || null,
       },
-    });
-
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: 'CREATE_ROOM',
-      entityType: 'ROOM',
-      entityId: room.id,
-      details: { roomNumber: room.roomNumber, capacity: room.capacity },
     });
 
     return NextResponse.json({ success: true, room }, { status: 201 });

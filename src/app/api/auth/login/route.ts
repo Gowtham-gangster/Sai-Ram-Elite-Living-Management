@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { verifyPassword, signAuthToken, AUTH_COOKIE_NAME } from '@/lib/auth';
 import { LoginSchema } from '@/lib/validations';
-import { createAuditLog } from '@/lib/audit';
 import { checkRateLimit, recordFailedAttempt, clearRateLimit } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {
@@ -60,16 +59,6 @@ export async function POST(request: NextRequest) {
       email: user.email,
       name: user.name,
       role: user.role,
-    });
-
-    // Log administrative audit entry
-    await createAuditLog({
-      adminUserId: user.id,
-      adminName: user.name,
-      action: 'ADMIN_LOGIN',
-      entityType: 'AUTH',
-      entityId: user.id,
-      ipAddress: ip,
     });
 
     const response = NextResponse.json({

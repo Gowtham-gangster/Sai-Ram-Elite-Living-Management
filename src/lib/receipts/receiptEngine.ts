@@ -9,7 +9,10 @@ export interface ReceiptGenerationResult {
   receiptNumber?: string;
   downloadToken?: string;
   googleDriveFileId?: string | null;
+  googleDriveFolderId?: string | null;
+  receiptFileName?: string | null;
   status: string;
+  driveUploadStatus?: string;
   error?: string;
 }
 
@@ -43,7 +46,10 @@ export async function generateSequentialReceiptNumber(): Promise<string> {
 }
 
 /**
- * Generates an official PDF receipt, uploads it to Google Drive, and stores metadata in Supabase
+ * Generates an official PDF receipt, uploads it to Google Drive under the authoritative Month-Year folder,
+ * and stores full audit metadata in the database.
+ * 
+ * Guaranteed Idempotent: If the receipt has already been uploaded with a Google Drive file ID, returns existing.
  */
 export async function generateAndUploadReceiptForPayment(
   monthlyPaymentId: string,
@@ -66,19 +72,23 @@ export async function generateAndUploadReceiptForPayment(
 
     const effectiveAmountPaid = customAmountPaid !== undefined ? customAmountPaid : payment.totalAmountDue;
 
-    // Idempotency Check: check if receipt already exists for this exact amount
+    // 2. Idempotency Check: check if receipt already exists
     const existingReceipt = await db.receipt.findFirst({
       where: { monthlyPaymentId, amountPaid: effectiveAmountPaid },
     });
 
-    if (existingReceipt && existingReceipt.status === 'READY') {
+    // If receipt already exists AND has a valid Google Drive file ID, return existing immediately
+    if (existingReceipt && existingReceipt.googleDriveFileId && existingReceipt.status === 'READY') {
       return {
         success: true,
         receiptId: existingReceipt.id,
         receiptNumber: existingReceipt.receiptNumber,
         downloadToken: existingReceipt.downloadToken || undefined,
         googleDriveFileId: existingReceipt.googleDriveFileId,
+        googleDriveFolderId: existingReceipt.googleDriveFolderId,
+        receiptFileName: existingReceipt.receiptFileName,
         status: existingReceipt.status,
+        driveUploadStatus: existingReceipt.driveUploadStatus || 'SUCCESS',
       };
     }
 
@@ -86,11 +96,12 @@ export async function generateAndUploadReceiptForPayment(
       where: { id: 'default' },
     });
 
-    // 2. Generate receipt number and secure token
+    // 3. Generate receipt number and secure token
     const receiptNumber = existingReceipt?.receiptNumber || (await generateSequentialReceiptNumber());
     const downloadToken = existingReceipt?.downloadToken || crypto.randomBytes(24).toString('hex');
+    const paymentRef = payment.transactionReference || payment.gatewayPaymentId || receiptNumber;
 
-    // 3. Generate A4 PDF Binary
+    // 4. Generate A4 PDF Binary
     const pdfBytes = await generateReceiptPdf({
       receiptNumber,
       residentName: payment.resident?.fullName || 'Resident',
@@ -101,7 +112,7 @@ export async function generateAndUploadReceiptForPayment(
       balanceRemaining: balanceRemaining !== undefined ? balanceRemaining : 0,
       paymentDate: payment.paidDate || new Date(),
       paymentMethod: payment.paymentMethod || 'UPI',
-      transactionReference: payment.transactionReference || payment.gatewayPaymentId,
+      transactionReference: paymentRef,
       hostelName: hostelSettings?.hostelName || 'SAIRAM ELITE LIVING',
       hostelAddress:
         hostelSettings?.hostelAddress ||
@@ -109,29 +120,45 @@ export async function generateAndUploadReceiptForPayment(
       contactPhone: hostelSettings?.contactPhone || '+91 8977339133, 918688535143',
     });
 
-    // 4. Upload to Google Drive
-    let driveFileId: string | null = null;
-    let driveUploadStatus = 'READY';
+    // 5. Upload to Google Drive under Month-Year subfolder
+    let driveFileId: string | null = existingReceipt?.googleDriveFileId || null;
+    let driveFolderId: string | null = existingReceipt?.googleDriveFolderId || null;
+    let driveFileName: string | null = existingReceipt?.receiptFileName || null;
+    let driveUploadStatus: string = 'SUCCESS';
+    let driveUploadedAt: Date | null = existingReceipt?.driveUploadedAt || null;
 
-    try {
-      const uploadResult = await uploadReceiptPdfToDrive({
-        receiptNumber,
-        residentName: payment.resident?.fullName || 'Resident',
-        billingMonth: payment.billingMonth,
-        pdfBytes,
-      });
-      driveFileId = uploadResult.fileId;
-    } catch (driveErr: any) {
-      console.error('Google Drive receipt upload failed (Payment remains processed):', driveErr);
-      driveUploadStatus = 'GENERATION_PENDING';
+    if (!driveFileId) {
+      try {
+        const uploadResult = await uploadReceiptPdfToDrive({
+          receiptNumber,
+          residentName: payment.resident?.fullName || 'Resident',
+          roomNumber: payment.room?.roomNumber || '101',
+          billingMonth: payment.billingMonth,
+          paymentReference: paymentRef,
+          pdfBytes,
+        });
+
+        driveFileId = uploadResult.fileId;
+        driveFolderId = uploadResult.folderId;
+        driveFileName = uploadResult.fileName;
+        driveUploadStatus = 'SUCCESS';
+        driveUploadedAt = new Date();
+      } catch (driveErr: any) {
+        console.error('Google Drive receipt upload error (Payment remains PAID):', driveErr.message);
+        driveUploadStatus = 'FAILED';
+      }
     }
 
-    // 5. Upsert Receipt record in database
+    // 6. Upsert Receipt record in database
     const savedReceipt = await db.receipt.upsert({
       where: { receiptNumber },
       update: {
         googleDriveFileId: driveFileId,
-        status: driveUploadStatus,
+        googleDriveFolderId: driveFolderId,
+        receiptFileName: driveFileName,
+        driveUploadStatus,
+        driveUploadedAt,
+        status: 'READY',
         downloadToken,
         amountPaid: effectiveAmountPaid,
       },
@@ -147,7 +174,11 @@ export async function generateAndUploadReceiptForPayment(
         paymentDate: payment.paidDate || new Date(),
         generatedBy: 'SYSTEM (AUTOMATED)',
         googleDriveFileId: driveFileId,
-        status: driveUploadStatus,
+        googleDriveFolderId: driveFolderId,
+        receiptFileName: driveFileName,
+        driveUploadStatus,
+        driveUploadedAt,
+        status: 'READY',
         downloadToken,
       },
     });
@@ -164,7 +195,10 @@ export async function generateAndUploadReceiptForPayment(
       receiptNumber: savedReceipt.receiptNumber,
       downloadToken: savedReceipt.downloadToken || undefined,
       googleDriveFileId: savedReceipt.googleDriveFileId,
+      googleDriveFolderId: savedReceipt.googleDriveFolderId,
+      receiptFileName: savedReceipt.receiptFileName,
       status: savedReceipt.status,
+      driveUploadStatus: savedReceipt.driveUploadStatus || 'SUCCESS',
     };
   } catch (err: any) {
     console.error('Receipt generation error:', err);

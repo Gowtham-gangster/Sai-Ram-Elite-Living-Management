@@ -91,7 +91,10 @@ export async function POST(
     }
 
     const rentAmount = overrideRent !== undefined ? Number(overrideRent) : (registration.monthlyRent || 0.0);
-    const depositAmount = overrideDeposit !== undefined ? Number(overrideDeposit) : (registration.securityDeposit || 2000.0);
+    const depositValue =
+      overrideDeposit !== undefined && overrideDeposit !== null && String(overrideDeposit).trim() !== ''
+        ? String(overrideDeposit).trim()
+        : (registration.securityDeposit || null);
     const checkIn = registration.checkInDate || new Date();
 
     // Execute atomic onboarding transaction
@@ -103,10 +106,12 @@ export async function POST(
           phone: registration.mobileNumber,
           roomId: room.id,
           monthlyRent: rentAmount,
-          securityDeposit: depositAmount,
+          securityDeposit: depositValue,
           checkInDate: checkIn,
           idProofType: 'AADHAAR',
           idProofNumber: registration.aadhaarNumber || null,
+          identityDocumentUrl: registration.identityDocumentUrl || null,
+          googleDriveFileId: registration.googleDriveFileId || null,
           emergencyContactName: registration.guardianName || null,
           emergencyContactPhone: registration.emergencyContactNumber || null,
           address: registration.companyOrCollegeName || null,
@@ -155,25 +160,7 @@ export async function POST(
         },
       });
 
-      // 5. Create Audit Log
-      await tx.auditLog.create({
-        data: {
-          adminName,
-          action: 'APPROVE_REGISTRATION',
-          entityType: 'REGISTRATION',
-          entityId: registration.id,
-          details: JSON.stringify({
-            registrationId: registration.id,
-            residentId: resident.id,
-            residentName: resident.fullName,
-            roomNumber: room.roomNumber,
-            monthlyRent: rentAmount,
-            securityDeposit: depositAmount,
-          }),
-        },
-      });
-
-      // 6. Create Admin In-App Notification
+      // 5. Create Admin In-App Notification
       await tx.notification.create({
         data: {
           type: 'SUCCESS',

@@ -48,19 +48,9 @@ export async function GET(
       }
     }
 
-    // Fetch audit logs related to this registration
-    const auditLogs = await prisma.auditLog.findMany({
-      where: {
-        entityType: 'REGISTRATION',
-        entityId: registration.id,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
     return NextResponse.json({
       registration,
       roomInfo,
-      auditLogs,
     });
   } catch (error: any) {
     return NextResponse.json(

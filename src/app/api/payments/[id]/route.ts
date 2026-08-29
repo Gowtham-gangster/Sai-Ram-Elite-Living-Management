@@ -3,7 +3,6 @@ import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { UpdatePaymentStatusSchema } from '@/lib/validations';
 import { updatePaymentStatus } from '@/lib/payment-engine';
-import { createAuditLog } from '@/lib/audit';
 
 export async function GET(
   request: NextRequest,
@@ -76,21 +75,6 @@ export async function PUT(
       include: {
         resident: true,
         room: true,
-      },
-    });
-
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: 'UPDATE_PAYMENT_BILL',
-      entityType: 'PAYMENT',
-      entityId: id,
-      details: {
-        residentName: updated.resident.fullName,
-        billingMonth: updated.billingMonth,
-        totalAmountDue,
-        rentAmount,
-        penaltyAmount,
       },
     });
 

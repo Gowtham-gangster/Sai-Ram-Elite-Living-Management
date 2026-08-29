@@ -70,7 +70,7 @@ export default function AdminResidentsPage() {
     email: '',
     roomId: '',
     monthlyRent: 8000,
-    securityDeposit: 2000,
+    securityDeposit: '',
     checkInDate: new Date().toISOString().slice(0, 10),
     expectedCheckoutDate: '',
     checkOutDate: '',
@@ -204,7 +204,7 @@ export default function AdminResidentsPage() {
       email: '',
       roomId: availableRoom ? availableRoom.id : '',
       monthlyRent: 8000,
-      securityDeposit: 2000,
+      securityDeposit: '',
       checkInDate: new Date().toISOString().slice(0, 10),
       expectedCheckoutDate: '',
       checkOutDate: '',
@@ -229,7 +229,7 @@ export default function AdminResidentsPage() {
       email: resident.email || '',
       roomId: resident.roomId,
       monthlyRent: resident.monthlyRent || 0,
-      securityDeposit: resident.securityDeposit || 2000,
+      securityDeposit: resident.securityDeposit ? String(resident.securityDeposit) : '',
       checkInDate: new Date(resident.checkInDate).toISOString().slice(0, 10),
       expectedCheckoutDate: resident.expectedCheckoutDate
         ? new Date(resident.expectedCheckoutDate).toISOString().slice(0, 10)
@@ -284,7 +284,11 @@ export default function AdminResidentsPage() {
   const handleOpenCheckoutModal = (resident: any) => {
     setSelectedResidentForCheckout(resident);
     setActualCheckoutDate(new Date().toISOString().slice(0, 10));
-    setRefundAmount(resident.securityDeposit || 0);
+    setRefundAmount(
+      typeof resident.securityDeposit === 'string' && !isNaN(parseFloat(resident.securityDeposit))
+        ? parseFloat(resident.securityDeposit)
+        : 0
+    );
     setDeductionsAmount(0);
     setCheckoutNotes('');
     setActionError(null);
@@ -936,8 +940,11 @@ export default function AdminResidentsPage() {
               <div>
                 <span className="text-slate-500 block text-[10px] uppercase font-bold">Security Deposit</span>
                 <span className="text-base font-black text-amber-400 mt-0.5 block">
-                  ₹{(profileData.resident.securityDeposit || 0).toLocaleString('en-IN')}{' '}
-                  <span className="text-[10px] text-slate-400 font-normal">(One-time)</span>
+                  {profileData.resident.securityDeposit !== null &&
+                  profileData.resident.securityDeposit !== undefined &&
+                  String(profileData.resident.securityDeposit).trim() !== ''
+                    ? profileData.resident.securityDeposit
+                    : 'Not provided'}
                 </span>
               </div>
 
@@ -1010,36 +1017,6 @@ export default function AdminResidentsPage() {
                 </div>
               )}
             </div>
-
-            {/* Resident Activity / Audit Trail */}
-            {profileData.auditLogs && profileData.auditLogs.length > 0 && (
-              <div>
-                <h4 className="font-bold text-white uppercase tracking-wider text-[11px] mb-2 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-amber-400" />
-                  Resident Activity & Audit History:
-                </h4>
-                <div className="space-y-2">
-                  {profileData.auditLogs.map((log: any) => (
-                    <div key={log.id} className="p-3 bg-slate-900/50 rounded-xl border border-slate-800/80">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-bold text-amber-400">{log.action}</span>
-                        <span className="text-slate-500">
-                          {new Date(log.createdAt).toLocaleString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-300 mt-0.5">
-                        {log.details ? (typeof log.details === 'string' ? log.details : JSON.stringify(log.details)) : 'System event logged.'}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <div className="flex justify-end pt-4 border-t border-slate-800">
               <button
@@ -1183,14 +1160,13 @@ export default function AdminResidentsPage() {
 
             <div>
               <label className="block font-bold text-slate-300 mb-1">
-                Security Deposit (₹) <span className="text-[10px] text-slate-400 font-normal">(One-time)</span>
+                Security Deposit <span className="text-[10px] text-slate-400 font-normal">(Intake / Note)</span>
               </label>
               <input
-                type="number"
-                min="0"
-                step="500"
+                type="text"
+                placeholder="e.g. 2000, Yes, Paid, etc."
                 value={formData.securityDeposit}
-                onChange={(e) => setFormData({ ...formData, securityDeposit: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, securityDeposit: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-500"
               />
             </div>

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Settings,
   Building,
-  CreditCard,
   Bell,
   Shield,
   Save,
@@ -16,8 +15,6 @@ import {
   Mail,
   Globe,
   MapPin,
-  Landmark,
-  QrCode,
   Calendar,
   IndianRupee,
   Clock,
@@ -30,7 +27,7 @@ export default function AdminSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Settings State
+  // Settings State (Bank details managed in .env)
   const [settingsForm, setSettingsForm] = useState({
     hostelName: 'SAIRAM ELITE LIVING',
     hostelAddress: 'Plot #42, ITPL Main Road, Near Prestige Tech Park, Whitefield, Bengaluru - 560066',
@@ -38,12 +35,6 @@ export default function AdminSettingsPage() {
     whatsAppNumber: '+91 98450 12345',
     contactEmail: 'contact@sairameliteliving.com',
     websiteUrl: 'https://sairameliteliving.com',
-    bankName: 'HDFC Bank',
-    accountHolderName: 'SAIRAM ELITE LIVING HOSPITALITY LLP',
-    accountNumber: '50200098765432',
-    ifscCode: 'HDFC0001892',
-    upiId: 'sairamelite@hdfcbank',
-    paymentInstructions: 'Please transfer rent by the 5th of every month. Enter Resident Name & Room Number in remarks. Upload payment screenshot in management portal or share UTR with admin.',
     defaultDueDayOfMonth: 5,
     lateFeePerDay: 50,
     gracePeriodDays: 3,
@@ -83,12 +74,6 @@ export default function AdminSettingsPage() {
           whatsAppNumber: data.settings.whatsAppNumber || '',
           contactEmail: data.settings.contactEmail || '',
           websiteUrl: data.settings.websiteUrl || '',
-          bankName: data.settings.bankName || '',
-          accountHolderName: data.settings.accountHolderName || '',
-          accountNumber: data.settings.accountNumber || '',
-          ifscCode: data.settings.ifscCode || '',
-          upiId: data.settings.upiId || '',
-          paymentInstructions: data.settings.paymentInstructions || '',
           defaultDueDayOfMonth: data.settings.defaultDueDayOfMonth || 5,
           lateFeePerDay: data.settings.lateFeePerDay || 50,
           gracePeriodDays: data.settings.gracePeriodDays || 3,
@@ -224,18 +209,6 @@ export default function AdminSettingsPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab('PAYMENT')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'PAYMENT'
-              ? 'bg-brand-500 text-slate-950 shadow-md shadow-brand-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-          }`}
-        >
-          <Landmark className="w-4 h-4" />
-          <span>2. Payment Information</span>
-        </button>
-
-        <button
           onClick={() => setActiveTab('REMINDER')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'REMINDER'
@@ -244,7 +217,7 @@ export default function AdminSettingsPage() {
           }`}
         >
           <Bell className="w-4 h-4" />
-          <span>3. Reminder & Policy Settings</span>
+          <span>2. Reminder & Policy Settings</span>
         </button>
 
         <button
@@ -256,254 +229,9 @@ export default function AdminSettingsPage() {
           }`}
         >
           <Key className="w-4 h-4" />
-          <span>4. Account & Security</span>
+          <span>3. Account & Security</span>
         </button>
       </div>
-
-      {/* SECTION 1: HOSTEL INFORMATION */}
-      {activeTab === 'HOSTEL' && (
-        <form onSubmit={handleSaveSettings} className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
-          <div className="border-b border-slate-800 pb-4">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Building className="w-5 h-5 text-brand-400" />
-              <span>Hostel Profile Information</span>
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Official contact details and location for administrative receipts and communication headers.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
-            <div>
-              <label className="block font-bold text-slate-300 mb-1.5">
-                Hostel Name <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={settingsForm.hostelName}
-                onChange={(e) => setSettingsForm({ ...settingsForm, hostelName: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white font-semibold focus:outline-none focus:border-brand-500"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-300 mb-1.5">
-                Official Website URL
-              </label>
-              <div className="relative">
-                <Globe className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="url"
-                  placeholder="https://sairameliteliving.com"
-                  value={settingsForm.websiteUrl}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, websiteUrl: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white font-medium focus:outline-none focus:border-brand-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-300 mb-1.5">
-                Official Phone Number <span className="text-rose-400">*</span>
-              </label>
-              <div className="relative">
-                <Phone className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="text"
-                  required
-                  value={settingsForm.contactPhone}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, contactPhone: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white font-mono focus:outline-none focus:border-brand-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-300 mb-1.5">
-                Official WhatsApp Number <span className="text-rose-400">*</span>
-              </label>
-              <div className="relative">
-                <Phone className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-500" />
-                <input
-                  type="text"
-                  required
-                  value={settingsForm.whatsAppNumber}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, whatsAppNumber: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white font-mono focus:outline-none focus:border-brand-500"
-                />
-              </div>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-300 mb-1.5">
-                Official Email Address <span className="text-rose-400">*</span>
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="email"
-                  required
-                  value={settingsForm.contactEmail}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, contactEmail: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white focus:outline-none focus:border-brand-500"
-                />
-              </div>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-300 mb-1.5">
-                Hostel Physical Address <span className="text-rose-400">*</span>
-              </label>
-              <div className="relative">
-                <MapPin className="w-4 h-4 absolute left-3.5 top-3 text-slate-500" />
-                <textarea
-                  rows={2}
-                  required
-                  value={settingsForm.hostelAddress}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, hostelAddress: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white focus:outline-none focus:border-brand-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-4 border-t border-slate-800">
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-brand-500 hover:from-amber-400 hover:to-brand-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-brand-500/20 flex items-center gap-2 transition-all disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" />
-              <span>{isSaving ? 'Saving...' : 'Save Hostel Information'}</span>
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* SECTION 2: PAYMENT INFORMATION */}
-      {activeTab === 'PAYMENT' && (
-        <form onSubmit={handleSaveSettings} className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
-          <div className="border-b border-slate-800 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Landmark className="w-5 h-5 text-brand-400" />
-                  <span>Payment & Banking Information</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Hostel bank account & UPI details used strictly for payment instruction displays and official receipts.
-                </p>
-              </div>
-              <span className="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-mono">
-                No Gateways
-              </span>
-            </div>
-          </div>
-
-          {/* Administrative Storage Warning */}
-          <div className="p-3.5 bg-brand-500/10 border border-brand-500/20 rounded-2xl text-brand-300 text-xs flex items-center gap-2.5">
-            <Shield className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>
-              <strong>Administrative Confidentiality:</strong> These banking credentials are stored securely in the database and only accessible to authenticated hostel administrators.
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
-            <div>
-              <label className="block font-bold text-slate-300 mb-1.5">
-                Account Holder Name <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={settingsForm.accountHolderName}
-                onChange={(e) => setSettingsForm({ ...settingsForm, accountHolderName: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white font-semibold focus:outline-none focus:border-brand-500"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-300 mb-1.5">
-                Bank Name <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={settingsForm.bankName}
-                onChange={(e) => setSettingsForm({ ...settingsForm, bankName: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white font-semibold focus:outline-none focus:border-brand-500"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-300 mb-1.5">
-                Account Number <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={settingsForm.accountNumber}
-                onChange={(e) => setSettingsForm({ ...settingsForm, accountNumber: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white font-mono focus:outline-none focus:border-brand-500"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-300 mb-1.5">
-                IFSC Code <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={settingsForm.ifscCode}
-                onChange={(e) => setSettingsForm({ ...settingsForm, ifscCode: e.target.value.toUpperCase() })}
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white font-mono uppercase font-bold focus:outline-none focus:border-brand-500"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-300 mb-1.5">
-                UPI ID (Virtual Payment Address) <span className="text-rose-400">*</span>
-              </label>
-              <div className="relative">
-                <QrCode className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-400" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. sairamelite@hdfcbank"
-                  value={settingsForm.upiId}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, upiId: e.target.value.trim() })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white font-mono font-bold focus:outline-none focus:border-brand-500"
-                />
-              </div>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-300 mb-1.5">
-                Payment Instructions for Residents
-              </label>
-              <textarea
-                rows={3}
-                value={settingsForm.paymentInstructions}
-                onChange={(e) => setSettingsForm({ ...settingsForm, paymentInstructions: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white focus:outline-none focus:border-brand-500"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-4 border-t border-slate-800">
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-brand-500 hover:from-amber-400 hover:to-brand-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-brand-500/20 flex items-center gap-2 transition-all disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" />
-              <span>{isSaving ? 'Saving...' : 'Save Payment Information'}</span>
-            </button>
-          </div>
-        </form>
-      )}
 
       {/* SECTION 3: REMINDER & POLICY SETTINGS */}
       {activeTab === 'REMINDER' && (

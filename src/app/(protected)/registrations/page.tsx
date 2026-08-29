@@ -157,7 +157,7 @@ export default function RegistrationsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           roomNumber: selectedReg.requestedRoomNumber,
-          securityDeposit: selectedReg.securityDeposit || 2000,
+          securityDeposit: selectedReg.securityDeposit ?? undefined,
         }),
       });
 
@@ -451,12 +451,19 @@ export default function RegistrationsPage() {
                   {registrations.map((reg) => (
                     <tr key={reg.id} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-3.5 px-4">
-                        <Link
-                          href={`/registrations/${reg.id}`}
-                          className="font-bold text-white hover:text-amber-400 transition-colors"
-                        >
-                          {reg.fullName}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/registrations/${reg.id}`}
+                            className="font-bold text-white hover:text-amber-400 transition-colors"
+                          >
+                            {reg.fullName}
+                          </Link>
+                          {new Date(reg.updatedAt).getTime() - new Date(reg.createdAt).getTime() > 2000 && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20" title="Updated via Google Forms">
+                              Edited
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 font-medium">{reg.mobileNumber}</td>
                       <td className="py-3.5 px-4">
@@ -643,7 +650,13 @@ export default function RegistrationsPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Security Deposit:</span>
-              <span className="font-semibold text-slate-200">₹{selectedReg?.securityDeposit || 2000}</span>
+              <span className="font-semibold text-slate-200">
+                {selectedReg?.securityDeposit !== null &&
+                selectedReg?.securityDeposit !== undefined &&
+                String(selectedReg.securityDeposit).trim() !== ''
+                  ? selectedReg.securityDeposit
+                  : 'Not provided'}
+              </span>
             </div>
           </div>
 

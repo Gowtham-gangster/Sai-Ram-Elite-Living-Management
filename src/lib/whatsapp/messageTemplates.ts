@@ -16,6 +16,8 @@ export interface BuildPaymentReminderMessageParams {
     dueDate?: Date | string;
   };
   reminderStage: ReminderStage;
+  sequence?: number;
+  overdueDays?: number;
   paymentLink?: string; // Optional for future phase (undefined for this phase)
 }
 
@@ -33,14 +35,28 @@ export function formatBillingMonthDisplay(raw: string): string {
 }
 
 /**
- * Builds the plain text WhatsApp message body based on reminder stage
+ * Builds the plain text WhatsApp message body based on reminder stage and timing
  */
 export function buildPaymentReminderMessage(params: BuildPaymentReminderMessageParams): string {
   const residentName = params.resident.fullName || 'Resident';
   const amountFormatted = Number(params.payment.totalAmountDue).toLocaleString('en-IN');
   const billingMonthFormatted = formatBillingMonthDisplay(params.payment.billingMonth);
+  const sequence = params.sequence || 1;
+  const overdueDays = params.overdueDays || 0;
 
-  if (params.reminderStage === 'FIRST_DUE_REMINDER') {
+  // 1. FIRST REMINDER: Sent 2 days before due date (Sequence 1)
+  if (sequence === 1 || params.reminderStage === 'FIRST_DUE_REMINDER') {
+    return (
+      `Hello ${residentName},\n\n` +
+      `Your monthly rent payment of ₹${amountFormatted} for ${billingMonthFormatted} is due in 2 days.\n\n` +
+      `Please complete your payment at your earliest convenience.\n\n` +
+      `Thank you,\n` +
+      `SAIRAM ELITE LIVING`
+    );
+  }
+
+  // 2. DUE-DATE REMINDER: Sent on the due date (Sequence 2)
+  if (sequence === 2 || params.reminderStage === 'DUE_DATE_REMINDER') {
     return (
       `Hello ${residentName},\n\n` +
       `Your monthly rent payment of ₹${amountFormatted} for ${billingMonthFormatted} is due today.\n\n` +
@@ -48,16 +64,21 @@ export function buildPaymentReminderMessage(params: BuildPaymentReminderMessageP
       `Thank you,\n` +
       `SAIRAM ELITE LIVING`
     );
-  } else {
-    // SECOND_REMINDER
-    return (
-      `Hello ${residentName},\n\n` +
-      `This is a reminder that your monthly rent payment of ₹${amountFormatted} for ${billingMonthFormatted} is still pending.\n\n` +
-      `Please complete your payment at your earliest convenience.\n\n` +
-      `Thank you,\n` +
-      `SAIRAM ELITE LIVING`
-    );
   }
+
+  // 3. OVERDUE REMINDERS: Sent after the due date (Sequence 3, 4, 5... / D+2, D+4, D+6...)
+  const overdueNotice =
+    overdueDays > 0
+      ? `Your payment is ${overdueDays} days overdue. Please complete your payment at your earliest convenience.`
+      : `Your payment is overdue. Please complete your payment at your earliest convenience.`;
+
+  return (
+    `Hello ${residentName},\n\n` +
+    `Your monthly rent payment of ₹${amountFormatted} for ${billingMonthFormatted} is still pending.\n\n` +
+    `${overdueNotice}\n\n` +
+    `Thank you,\n` +
+    `SAIRAM ELITE LIVING`
+  );
 }
 
 /**
@@ -72,6 +93,8 @@ export function renderReminderTemplateText(input: ResidentReminderInput): string
       dueDate: input.dueDateFormatted,
     },
     reminderStage: input.reminderType,
+    sequence: input.sequence,
+    overdueDays: input.overdueDays,
     paymentLink: input.paymentLink,
   });
 }

@@ -89,7 +89,7 @@ export default function ResidentsPage() {
     checkInDate: new Date().toISOString().split('T')[0],
     expectedCheckoutDate: '',
     monthlyRent: 8000,
-    securityDeposit: 2000,
+    securityDeposit: '',
     declarationAccepted: true,
     notes: '',
   });
@@ -223,7 +223,7 @@ export default function ResidentsPage() {
       checkInDate: new Date().toISOString().split('T')[0],
       expectedCheckoutDate: '',
       monthlyRent: 8000,
-      securityDeposit: 2000,
+      securityDeposit: '',
       declarationAccepted: true,
       notes: '',
     });
@@ -350,7 +350,10 @@ export default function ResidentsPage() {
     setCheckoutData({
       checkOutDate: new Date().toISOString().split('T')[0],
       reason: 'Normal Checkout',
-      refundDepositAmount: res.securityDeposit || 2000,
+      refundDepositAmount:
+        typeof res.securityDeposit === 'string' && !isNaN(parseFloat(res.securityDeposit))
+          ? parseFloat(res.securityDeposit)
+          : 0,
       deductionsAmount: 0,
       notes: '',
     });
@@ -872,13 +875,13 @@ export default function ResidentsPage() {
 
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-300">
-                Security Deposit (₹) <span className="text-[10px] text-slate-400 font-normal">(One-time)</span>
+                Security Deposit <span className="text-[10px] text-slate-400 font-normal">(Intake / Note)</span>
               </label>
               <input
-                type="number"
-                min={0}
+                type="text"
+                placeholder="e.g. 2000, Yes, Paid"
                 value={formData.securityDeposit}
-                onChange={(e) => setFormData({ ...formData, securityDeposit: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, securityDeposit: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white focus:ring-2 focus:ring-amber-500 font-medium"
               />
             </div>

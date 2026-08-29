@@ -41,23 +41,6 @@ export async function POST(
       );
     }
 
-    // Log admin audit
-    await db.auditLog.create({
-      data: {
-        adminUserId: session.userId,
-        adminName: session.name,
-        action: 'RETRY_RECEIPT_UPLOAD',
-        entityType: 'Receipt',
-        entityId: result.receiptId || payment.id,
-        details: JSON.stringify({
-          receiptNumber: result.receiptNumber,
-          googleDriveFileId: result.googleDriveFileId,
-          status: result.status,
-          retriedBy: session.name,
-        }),
-      },
-    });
-
     return NextResponse.json({
       success: true,
       message: 'Receipt uploaded to Google Drive successfully.',

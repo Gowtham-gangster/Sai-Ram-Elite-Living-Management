@@ -82,6 +82,7 @@ export default function AdminRoomsPage() {
     sharingType: 'DOUBLE',
     amenities: [] as string[],
     status: 'AVAILABLE',
+    paymentEnabled: true,
     notes: '',
   });
 
@@ -170,6 +171,7 @@ export default function AdminRoomsPage() {
       sharingType: 'DOUBLE',
       amenities: ['Attached Washroom', 'High Speed WiFi', 'Daily Housekeeping'],
       status: 'AVAILABLE',
+      paymentEnabled: true,
       notes: '',
     });
     setActionError(null);
@@ -185,6 +187,7 @@ export default function AdminRoomsPage() {
       sharingType: room.sharingType,
       amenities: room.amenitiesList || [],
       status: room.status,
+      paymentEnabled: room.paymentEnabled !== undefined ? room.paymentEnabled : true,
       notes: room.notes || '',
     });
     setActionError(null);
@@ -768,11 +771,16 @@ export default function AdminRoomsPage() {
             {/* Financial Details */}
             <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800 flex items-center justify-between">
               <div>
-                <span className="text-slate-400 block">Monthly Collection:</span>
-                <span className="text-base font-black text-brand-400">
-                  ₹{(inspectedRoom.monthlyCollection || 0).toLocaleString('en-IN')}{' '}
-                  <span className="text-[11px] text-slate-400 font-normal">/ month</span>
-                </span>
+                <span className="text-slate-400 block">Payment Management:</span>
+                {inspectedRoom.paymentEnabled === false ? (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold inline-flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3 h-3" /> Not Applicable / Excluded
+                  </span>
+                ) : (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold inline-flex items-center gap-1 mt-1">
+                    <CheckCircle2 className="w-3 h-3" /> Enabled (₹{(inspectedRoom.monthlyCollection || 0).toLocaleString('en-IN')}/mo)
+                  </span>
+                )}
               </div>
               <div className="text-right">
                 <span className="text-slate-400 block">Current Occupancy:</span>
@@ -953,6 +961,41 @@ export default function AdminRoomsPage() {
               <option value="AVAILABLE">Available (Open for Booking)</option>
               <option value="MAINTENANCE">Under Maintenance / Renovation</option>
             </select>
+          </div>
+
+          {/* Payment Management Exclusion Setting */}
+          <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 space-y-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <label className="text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer">
+                  <IndianRupee className="w-4 h-4 text-emerald-400" />
+                  Rent & Payment Management
+                </label>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Disable this option for rooms that are not part of the hostel's rent collection system (e.g. owner, staff, or complimentary rooms).
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={formData.paymentEnabled}
+                  onChange={(e) => setFormData({ ...formData, paymentEnabled: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+            <div className="text-[11px] pt-1 border-t border-slate-800">
+              {formData.paymentEnabled ? (
+                <span className="text-emerald-400 font-medium flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Normal hostel rent & payment management enabled
+                </span>
+              ) : (
+                <span className="text-amber-400 font-medium flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" /> Excluded from rent collection, dues generation & payment reminders
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { processPaymentReminders } from '@/lib/reminders/paymentReminderEngine';
-import { createAuditLog } from '@/lib/audit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,20 +10,6 @@ export async function POST(request: NextRequest) {
     }
 
     const summary = await processPaymentReminders();
-
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: 'PROCESS_REMINDERS',
-      entityType: 'REMINDER',
-      details: {
-        scanned: summary.scanned,
-        firstRemindersSent: summary.firstRemindersSent,
-        secondRemindersSent: summary.secondRemindersSent,
-        paidCancelled: summary.paidCancelled,
-        failedCount: summary.failedCount,
-      },
-    });
 
     return NextResponse.json({
       success: true,

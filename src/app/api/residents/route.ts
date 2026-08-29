@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { ResidentSchema } from '@/lib/validations';
-import { createAuditLog } from '@/lib/audit';
+import { createNotification } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
   try {
@@ -129,7 +129,10 @@ export async function POST(request: NextRequest) {
     }
 
     const agreedMonthlyRent = data.monthlyRent > 0 ? data.monthlyRent : 0;
-    const agreedDeposit = data.securityDeposit !== undefined && data.securityDeposit >= 0 ? data.securityDeposit : 2000.0;
+    const agreedDeposit =
+      data.securityDeposit !== undefined && data.securityDeposit !== null && String(data.securityDeposit).trim() !== ''
+        ? String(data.securityDeposit).trim()
+        : null;
 
     // 3. Create resident
     const resident = await db.resident.create({
@@ -183,19 +186,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 6. Audit Log
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: 'ONBOARD_RESIDENT',
-      entityType: 'RESIDENT',
-      entityId: resident.id,
-      details: {
-        residentName: resident.fullName,
-        roomNumber: targetRoom.roomNumber,
-        phone: resident.phone,
-        monthlyRent: agreedMonthlyRent,
-      },
+    // Notification
+    await createNotification({
+      title: 'New Resident Admitted',
+      message: `${resident.fullName} was admitted into Room ${targetRoom.roomNumber}.`,
+      type: 'SUCCESS',
+      linkUrl: '/admin/residents',
     });
 
     return NextResponse.json({ success: true, resident }, { status: 201 });

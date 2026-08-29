@@ -99,12 +99,14 @@ export async function GET(request: NextRequest) {
     // 3. Fetch Resident Records
     const allResidents = await db.resident.findMany({
       include: {
-        room: { select: { roomNumber: true, floor: true } },
+        room: { select: { roomNumber: true, floor: true, paymentEnabled: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    const activeResidentsList = allResidents.filter((r) => r.status === 'ACTIVE' || r.status === 'NOTICE_PERIOD');
+    const activeResidentsList = allResidents.filter(
+      (r) => (r.status === 'ACTIVE' || r.status === 'NOTICE_PERIOD') && r.room?.paymentEnabled !== false
+    );
     const expectedMonthlyCollection = activeResidentsList.reduce((acc, r) => acc + (r.monthlyRent || 0), 0);
 
     const newResidentsThisMonth = allResidents.filter((r) => {
@@ -119,7 +121,7 @@ export async function GET(request: NextRequest) {
       db.monthlyPayment.findMany({
         include: {
           resident: { select: { fullName: true, phone: true } },
-          room: { select: { roomNumber: true } },
+          room: { select: { roomNumber: true, paymentEnabled: true } },
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -131,25 +133,10 @@ export async function GET(request: NextRequest) {
     const totalPaymentsCollected = paidPaymentsList.reduce((acc, p) => acc + (p.totalAmountDue || 0), 0);
 
     const pendingPaymentsList = allPayments.filter(
-      (p) => p.status === 'PENDING' || p.status === 'SUBMITTED' || p.status === 'OVERDUE'
+      (p) => (p.status === 'PENDING' || p.status === 'SUBMITTED' || p.status === 'OVERDUE') && p.room?.paymentEnabled !== false
     );
     const pendingPaymentsCount = pendingPaymentsList.length;
     const outstandingAmount = pendingPaymentsList.reduce((acc, p) => acc + (p.totalAmountDue || 0), 0);
-
-    // 5. Recent Activity Audit Logs
-    const recentAuditLogs = await db.auditLog.findMany({
-      take: 6,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        adminName: true,
-        action: true,
-        entityType: true,
-        entityId: true,
-        details: true,
-        createdAt: true,
-      },
-    });
 
     return NextResponse.json({
       metrics: {
@@ -208,7 +195,6 @@ export async function GET(request: NextRequest) {
           paidDate: p.paidDate,
           receiptNumber: p.receiptNumber,
         })),
-        recentAuditLogs,
       },
     });
   } catch (error: any) {

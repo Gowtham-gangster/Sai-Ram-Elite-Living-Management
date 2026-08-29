@@ -310,7 +310,7 @@ async function runTestSuite() {
         phone: `9100${Date.now().toString().slice(-6)}`,
         roomId: testRoom.id,
         monthlyRent: 8000,
-        securityDeposit: 2000,
+        securityDeposit: '2000',
         status: 'ACTIVE',
       },
     });
@@ -322,7 +322,7 @@ async function runTestSuite() {
         phone: `9200${Date.now().toString().slice(-6)}`,
         roomId: testRoom.id,
         monthlyRent: 8000,
-        securityDeposit: 2000,
+        securityDeposit: '2000',
         status: 'ACTIVE',
       },
     });

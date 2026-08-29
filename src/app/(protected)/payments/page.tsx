@@ -218,7 +218,7 @@ export default function PaymentsPage() {
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time rent collection tracking, verified transaction auditing, and Google Drive receipt management.
+            Real-time rent collection tracking, verified transaction management, and Google Drive receipts.
           </p>
         </div>
 

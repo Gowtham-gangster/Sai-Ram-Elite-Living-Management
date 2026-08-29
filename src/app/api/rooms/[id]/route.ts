@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { RoomSchema } from '@/lib/validations';
-import { createAuditLog } from '@/lib/audit';
 
 export async function GET(
   request: NextRequest,
@@ -116,17 +115,9 @@ export async function PUT(
         sharingType: data.sharingType,
         amenities: JSON.stringify(data.amenities || []),
         status: data.status,
+        paymentEnabled: data.paymentEnabled !== undefined ? data.paymentEnabled : true,
         notes: data.notes || null,
       },
-    });
-
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: 'UPDATE_ROOM',
-      entityType: 'ROOM',
-      entityId: id,
-      details: { roomNumber: updatedRoom.roomNumber, capacity: updatedRoom.capacity },
     });
 
     return NextResponse.json({ success: true, room: updatedRoom });
@@ -166,15 +157,6 @@ export async function DELETE(
     }
 
     await db.room.delete({ where: { id } });
-
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: 'DELETE_ROOM',
-      entityType: 'ROOM',
-      entityId: id,
-      details: { roomNumber: room.roomNumber },
-    });
 
     return NextResponse.json({ success: true, message: `Room ${room.roomNumber} deleted successfully` });
   } catch (error: any) {

@@ -66,7 +66,7 @@ export interface NormalizedSheetRow {
   rawCheckInDateString: string;
   monthlyRent: number | null;
   rawMonthlyRentString: string;
-  securityDeposit: number | null;
+  securityDeposit: string | null;
   rawSecurityDepositString: string;
   identityDocumentUrl: string | null;
   declarationAccepted: boolean;
@@ -101,41 +101,52 @@ export interface SyncResult {
 let isSyncRunning = false;
 
 /**
- * Generates a stable deterministic external response ID
+ * Generates an immutable deterministic external response ID based purely on the original submission timestamp anchor.
+ * This anchor NEVER changes even if the resident edits Full Name, Mobile, Room, Rent, Occupation, etc.
  */
 export function generateDeterministicResponseId(
   timestamp: string,
-  mobile: string,
-  fullName: string,
-  rowIndex: number
+  mobile?: string,
+  fullName?: string,
+  rowIndex?: number
 ): string {
-  const cleanMobile = mobile.replace(/[\s-]/g, '').trim();
-  const cleanName = fullName.trim().toLowerCase();
-  const cleanTime = timestamp.trim();
+  const cleanTime = (timestamp || '').trim();
+  if (cleanTime) {
+    const hash = crypto.createHash('sha256').update(`ts_${cleanTime}`).digest('hex').substring(0, 16);
+    return `gform_${hash}`;
+  }
+  const cleanMobile = (mobile || '').replace(/[\s-]/g, '').trim();
+  const cleanName = (fullName || '').trim().toLowerCase();
+  const seed = `${cleanMobile}_${cleanName}_row${rowIndex || 0}`;
+  const hash = crypto.createHash('sha256').update(seed).digest('hex').substring(0, 16);
+  return `gform_${hash}`;
+}
 
+/**
+ * Legacy generator for backward compatibility lookup
+ */
+export function generateDeterministicLegacyId(
+  timestamp: string,
+  mobile: string,
+  fullName: string
+): string {
+  const cleanMobile = (mobile || '').replace(/[\s-]/g, '').trim();
+  const cleanName = (fullName || '').trim().toLowerCase();
+  const cleanTime = (timestamp || '').trim();
   const seed = `${cleanTime}_${cleanMobile}_${cleanName}`;
   const hash = crypto.createHash('sha256').update(seed).digest('hex').substring(0, 16);
   return `gform_${hash}`;
 }
 
 /**
- * Parses numeric security deposit safely without assuming 0 for blank
+ * Preserves exact Google Form short answer string for Security Deposit
  */
-export function parseSecurityDeposit(raw: any): { amount: number | null; raw: string } {
-  if (raw === undefined || raw === null || raw === '') {
-    return { amount: null, raw: '' };
+export function parseSecurityDeposit(raw: any): { value: string | null; raw: string } {
+  if (raw === undefined || raw === null) {
+    return { value: null, raw: '' };
   }
   const str = String(raw).trim();
-  if (str === '' || /^(na|n\/a|nil|none|no|yes)$/i.test(str)) {
-    return { amount: null, raw: str };
-  }
-  // Extract number (e.g. "2,000/-", "2000 rs", "4000")
-  const cleanNumStr = str.replace(/[^\d.]/g, '');
-  const parsed = parseFloat(cleanNumStr);
-  if (!isNaN(parsed) && parsed >= 0) {
-    return { amount: parsed, raw: str };
-  }
-  return { amount: null, raw: str };
+  return { value: str.length > 0 ? str : null, raw: str };
 }
 
 /**
@@ -245,20 +256,6 @@ export async function synchronizeGoogleFormResponses(triggeredBy: string = 'SYST
         ', '
       )}. Synchronization paused to prevent incorrect data mapping.`;
 
-      await prisma.syncLog.create({
-        data: {
-          source: 'GOOGLE_SHEETS',
-          status: 'CONFIG_ERROR',
-          rowsScanned: 0,
-          newCount: 0,
-          updatedCount: 0,
-          skippedCount: 0,
-          errorCount: 1,
-          details: JSON.stringify({ error: errMessage, headers }),
-          durationMs: Date.now() - startTime,
-        },
-      });
-
       return {
         success: false,
         status: 'CONFIG_ERROR',
@@ -293,7 +290,7 @@ export async function synchronizeGoogleFormResponses(triggeredBy: string = 'SYST
       allRooms.map((r: any) => [r.roomNumber.trim().toUpperCase(), r])
     );
 
-    // 4. Process Each Row with ZERO Field Shifting
+    // 4. Process Each Row with ZERO Field Shifting & Robust Edit Detection
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowIndex = i + 2; // 1-indexed row number in spreadsheet
@@ -368,9 +365,9 @@ export async function synchronizeGoogleFormResponses(triggeredBy: string = 'SYST
       const { amount: rentAmount } = parseMonthlyRent(rawRowData.monthly_rent);
       const monthlyRent = rentAmount !== null ? rentAmount : 0.0;
 
-      // Security Deposit Parsing
-      const { amount: depositAmount } = parseSecurityDeposit(rawRowData.security_deposit);
-      const securityDeposit = depositAmount !== null ? depositAmount : 2000.0;
+      // Security Deposit Mapping (Exact Short Answer String from Google Form)
+      const { value: depositValue } = parseSecurityDeposit(rawRowData.security_deposit);
+      const securityDeposit = depositValue;
 
       // Declaration Normalization
       const rawDecl = rawRowData.declaration_accepted ? String(rawRowData.declaration_accepted).toLowerCase() : '';
@@ -394,30 +391,57 @@ export async function synchronizeGoogleFormResponses(triggeredBy: string = 'SYST
       const parsedTimestamp = parseGoogleSheetDate(timestampStr);
       const sourceSubmittedAt = parsedTimestamp.isValid && parsedTimestamp.date ? parsedTimestamp.date : new Date();
 
-      // Deterministic External Response ID
-      const externalResponseId = generateDeterministicResponseId(
+      // Compute Deterministic Identity Candidate & Legacy ID
+      const candidateResponseId = generateDeterministicResponseId(
         timestampStr || `row_${rowIndex}`,
         mobileNumber,
         fullName,
         rowIndex
       );
+      const legacyResponseId = generateDeterministicLegacyId(
+        timestampStr || `row_${rowIndex}`,
+        mobileNumber,
+        fullName
+      );
 
-      // Check existing registration
-      const existingRegistration = await prisma.registration.findFirst({
+      // Multi-tier Priority Identity Lookup
+      // Priority 1: Match by exact externalResponseId (stable anchor or legacy ID)
+      let existingRegistration = await prisma.registration.findFirst({
         where: {
+          externalSource: 'GOOGLE_FORM',
           OR: [
-            { externalResponseId },
-            { mobileNumber, externalSource: 'GOOGLE_FORM' },
+            { externalResponseId: candidateResponseId },
+            { externalResponseId: legacyResponseId },
           ],
         },
       });
+
+      // Priority 2: Match by exact submission timestamp (if valid)
+      if (!existingRegistration && parsedTimestamp.isValid && parsedTimestamp.date && timestampStr) {
+        existingRegistration = await prisma.registration.findFirst({
+          where: {
+            externalSource: 'GOOGLE_FORM',
+            sourceSubmittedAt: parsedTimestamp.date,
+          },
+        });
+      }
+
+      // Priority 3: Fallback match by mobile number for Google Form registrations
+      if (!existingRegistration && mobileNumber) {
+        existingRegistration = await prisma.registration.findFirst({
+          where: {
+            externalSource: 'GOOGLE_FORM',
+            mobileNumber,
+          },
+        });
+      }
 
       if (!existingRegistration) {
         // CREATE NEW REGISTRATION (Status: NEW)
         await prisma.registration.create({
           data: {
             externalSource: 'GOOGLE_FORM',
-            externalResponseId,
+            externalResponseId: candidateResponseId,
             fullName,
             mobileNumber,
             guardianName,
@@ -461,236 +485,161 @@ export async function synchronizeGoogleFormResponses(triggeredBy: string = 'SYST
 
         newCount++;
       } else {
-        // EXISTING REGISTRATION EXISTS
+        // EXISTING REGISTRATION FOUND -> UPDATE IN-PLACE WITHOUT DUPLICATION
+        const isDateChanged =
+          existingRegistration.checkInDate && checkInDate
+            ? formatToIsoDateOnly(existingRegistration.checkInDate) !== formatToIsoDateOnly(checkInDate)
+            : (existingRegistration.checkInDate || null) !== (checkInDate || null);
+
         const isDocChanged =
           (existingRegistration.googleDriveFileId || null) !== (googleDriveFileId || null) ||
           (existingRegistration.identityDocumentUrl || null) !== (identityDocUrl || null);
 
-        if (existingRegistration.status === 'NEW' || existingRegistration.status === 'UNDER_REVIEW') {
-          // Compare unapproved registration fields
-          const isDateChanged =
-            existingRegistration.checkInDate && checkInDate
-              ? formatToIsoDateOnly(existingRegistration.checkInDate) !== formatToIsoDateOnly(checkInDate)
-              : existingRegistration.checkInDate !== checkInDate;
+        const changedFieldNames: string[] = [];
 
-          const isChanged =
-            existingRegistration.fullName !== fullName ||
-            existingRegistration.requestedRoomNumber !== requestedRoomNumber ||
-            existingRegistration.companyOrCollegeName !== companyOrCollegeName ||
-            existingRegistration.occupation !== occupation ||
-            existingRegistration.guardianName !== guardianName ||
-            existingRegistration.monthlyRent !== monthlyRent ||
-            existingRegistration.securityDeposit !== securityDeposit ||
-            isDateChanged ||
-            isDocChanged;
+        if (existingRegistration.fullName !== fullName) changedFieldNames.push('Full Name');
+        if (existingRegistration.mobileNumber !== mobileNumber) changedFieldNames.push('Mobile Number');
+        if ((existingRegistration.guardianName || null) !== (guardianName || null)) changedFieldNames.push('Guardian Name');
+        if ((existingRegistration.emergencyContactNumber || null) !== (emergencyContactNumber || null)) changedFieldNames.push('Emergency Contact');
+        if ((existingRegistration.aadhaarNumber || null) !== (aadhaarNumber || null)) changedFieldNames.push('Aadhaar Number');
+        if ((existingRegistration.occupation || null) !== (occupation || null)) changedFieldNames.push('Occupation');
+        if ((existingRegistration.companyOrCollegeName || null) !== (companyOrCollegeName || null)) changedFieldNames.push('Company/College');
+        if ((existingRegistration.requestedRoomNumber || null) !== (requestedRoomNumber || null)) changedFieldNames.push('Requested Room');
+        if (existingRegistration.monthlyRent !== monthlyRent) changedFieldNames.push('Monthly Rent');
+        if ((existingRegistration.securityDeposit || null) !== (securityDeposit || null)) changedFieldNames.push('Security Deposit');
+        if (isDateChanged) changedFieldNames.push('Check-in Date');
+        if (isDocChanged) changedFieldNames.push('Identity Document');
 
-          if (isChanged) {
-            await prisma.registration.update({
-              where: { id: existingRegistration.id },
-              data: {
-                fullName,
-                mobileNumber,
-                guardianName,
-                emergencyContactNumber,
-                aadhaarNumber,
-                occupation,
-                companyOrCollegeName,
-                requestedRoomNumber,
-                checkInDate,
-                monthlyRent,
-                securityDeposit,
-                identityDocumentUrl: identityDocUrl || existingRegistration.identityDocumentUrl,
-                googleDriveFileId: googleDriveFileId || existingRegistration.googleDriveFileId,
-                rawSourceData: JSON.stringify(rawRowData),
-                updatedAt: new Date(),
-              },
-            });
+        const isChanged = changedFieldNames.length > 0;
 
-            changesDetectedCount++;
-            updatedCount++;
-
-            // Create notification for updated registration
-            await prisma.notification.create({
-              data: {
-                type: 'INFO',
-                title: 'Registration Updated via Google Forms',
-                message: `${fullName}'s registration was updated from Google Forms (Room: ${requestedRoomNumber || 'N/A'}).`,
-                linkUrl: `/registrations/${existingRegistration.id}`,
-              },
-            });
-
-            diagnostics.push({
-              rowIndex,
+        if (isChanged) {
+          // Update Registration in-place, preserving externalResponseId, status, residentId, reviewedBy, etc.
+          await prisma.registration.update({
+            where: { id: existingRegistration.id },
+            data: {
               fullName,
-              mobileMasked: `******${mobileNumber.slice(-4)}`,
-              room: requestedRoomNumber || 'N/A',
-              checkInDateIso: checkInDate ? formatToIsoDateOnly(checkInDate) : null,
-              action: 'UPDATED_PENDING_REGISTRATION',
-            });
-          } else {
-            skippedCount++;
-          }
-        } else if (existingRegistration.status === 'APPROVED' && existingRegistration.residentId) {
-          // APPROVED RESIDENT: Handle edits strictly and safely
-          if (isDocChanged) {
-            await prisma.registration.update({
-              where: { id: existingRegistration.id },
-              data: {
-                identityDocumentUrl: identityDocUrl || existingRegistration.identityDocumentUrl,
-                googleDriveFileId: googleDriveFileId || existingRegistration.googleDriveFileId,
-                rawSourceData: JSON.stringify(rawRowData),
-                updatedAt: new Date(),
-              },
-            });
-            changesDetectedCount++;
-            updatedCount++;
-          }
-          const linkedResident = await prisma.resident.findUnique({
-            where: { id: existingRegistration.residentId },
-            include: { room: true },
+              mobileNumber,
+              guardianName,
+              emergencyContactNumber,
+              aadhaarNumber,
+              occupation,
+              occupationType,
+              companyOrCollegeName,
+              requestedRoomNumber,
+              checkInDate,
+              monthlyRent,
+              securityDeposit,
+              declarationAccepted,
+              identityDocumentUrl: identityDocUrl || existingRegistration.identityDocumentUrl,
+              googleDriveFileId: googleDriveFileId || existingRegistration.googleDriveFileId,
+              rawSourceData: JSON.stringify(rawRowData),
+              updatedAt: new Date(),
+            },
           });
 
-          if (linkedResident) {
-            let residentUpdated = false;
-            const profileUpdates: any = {};
+          changesDetectedCount++;
+          updatedCount++;
 
-            // 1. Low-risk profile field updates (College/Company, Emergency Contact, Guardian)
-            if (companyOrCollegeName && companyOrCollegeName !== linkedResident.address) {
-              profileUpdates.address = companyOrCollegeName;
-              residentUpdated = true;
-            }
-            if (emergencyContactNumber && emergencyContactNumber !== linkedResident.emergencyContactPhone) {
-              profileUpdates.emergencyContactPhone = emergencyContactNumber;
-              residentUpdated = true;
-            }
-            if (guardianName && guardianName !== linkedResident.emergencyContactName) {
-              profileUpdates.emergencyContactName = guardianName;
-              residentUpdated = true;
-            }
+          // Create notification for updated registration with non-sensitive details
+          await prisma.notification.create({
+            data: {
+              type: 'INFO',
+              title: 'Registration Updated via Google Forms',
+              message: `${fullName}'s submission was updated via Google Forms. Changed: ${changedFieldNames.join(', ')}${requestedRoomNumber ? ` (Room: ${requestedRoomNumber})` : ''}.`,
+              linkUrl: `/registrations/${existingRegistration.id}`,
+            },
+          });
 
-            if (residentUpdated) {
-              await prisma.resident.update({
-                where: { id: linkedResident.id },
-                data: profileUpdates,
-              });
+          diagnostics.push({
+            rowIndex,
+            fullName,
+            mobileMasked: `******${mobileNumber.slice(-4)}`,
+            room: requestedRoomNumber || 'N/A',
+            checkInDateIso: checkInDate ? formatToIsoDateOnly(checkInDate) : null,
+            action: `UPDATED (${changedFieldNames.join(', ')})`,
+          });
 
-              await prisma.auditLog.create({
-                data: {
-                  adminName: 'Google Sheets Sync',
-                  action: 'UPDATE_RESIDENT',
-                  entityType: 'RESIDENT',
-                  entityId: linkedResident.id,
-                  details: JSON.stringify({
-                    source: 'GOOGLE_FORM_EDIT',
-                    changes: profileUpdates,
-                  }),
-                },
-              });
+          // APPROVED RESIDENT: Handle synchronized updates to linked resident record safely
+          if (existingRegistration.status === 'APPROVED' && existingRegistration.residentId) {
+            const linkedResident = await prisma.resident.findUnique({
+              where: { id: existingRegistration.residentId },
+              include: { room: true },
+            });
 
-              changesDetectedCount++;
-              updatedCount++;
-            }
+            if (linkedResident) {
+              const residentUpdates: any = {};
+              if (fullName && fullName !== linkedResident.fullName) residentUpdates.fullName = fullName;
+              if (mobileNumber && mobileNumber !== linkedResident.phone) residentUpdates.phone = mobileNumber;
+              if (companyOrCollegeName && companyOrCollegeName !== linkedResident.address) residentUpdates.address = companyOrCollegeName;
+              if (emergencyContactNumber && emergencyContactNumber !== linkedResident.emergencyContactPhone) residentUpdates.emergencyContactPhone = emergencyContactNumber;
+              if (guardianName && guardianName !== linkedResident.emergencyContactName) residentUpdates.emergencyContactName = guardianName;
+              if (aadhaarNumber && aadhaarNumber !== linkedResident.idProofNumber) residentUpdates.idProofNumber = aadhaarNumber;
+              if (monthlyRent !== null && monthlyRent !== linkedResident.monthlyRent) residentUpdates.monthlyRent = monthlyRent;
+              if (securityDeposit !== null && securityDeposit !== linkedResident.securityDeposit) residentUpdates.securityDeposit = securityDeposit;
+              if (identityDocUrl && identityDocUrl !== linkedResident.identityDocumentUrl) residentUpdates.identityDocumentUrl = identityDocUrl;
+              if (googleDriveFileId && googleDriveFileId !== linkedResident.googleDriveFileId) residentUpdates.googleDriveFileId = googleDriveFileId;
 
-            // 2. High-risk Room Number Change: Create RoomChangeRequest (Do NOT auto-move resident)
-            if (
-              requestedRoomNumber &&
-              linkedResident.room &&
-              requestedRoomNumber.trim().toUpperCase() !== linkedResident.room.roomNumber.trim().toUpperCase()
-            ) {
-              const targetRoom = roomMapByNumber.get(requestedRoomNumber.trim().toUpperCase());
-              if (targetRoom) {
-                const existingReq = await prisma.roomChangeRequest.findFirst({
-                  where: {
-                    residentId: linkedResident.id,
-                    requestedRoomId: targetRoom.id,
-                    status: 'PENDING',
-                  },
+              if (Object.keys(residentUpdates).length > 0) {
+                await prisma.resident.update({
+                  where: { id: linkedResident.id },
+                  data: residentUpdates,
                 });
+              }
 
-                if (!existingReq) {
-                  await prisma.roomChangeRequest.create({
-                    data: {
+              // High-risk Room Number Change: Create RoomChangeRequest (Do NOT auto-move resident or create duplicate)
+              if (
+                requestedRoomNumber &&
+                linkedResident.room &&
+                requestedRoomNumber.trim().toUpperCase() !== linkedResident.room.roomNumber.trim().toUpperCase()
+              ) {
+                const targetRoom = roomMapByNumber.get(requestedRoomNumber.trim().toUpperCase());
+                if (targetRoom) {
+                  const existingReq = await prisma.roomChangeRequest.findFirst({
+                    where: {
                       residentId: linkedResident.id,
-                      currentRoomId: linkedResident.roomId,
                       requestedRoomId: targetRoom.id,
-                      reason: 'Submitted via Google Form Response Edit',
-                      source: 'GOOGLE_FORM',
                       status: 'PENDING',
                     },
                   });
 
-                  await prisma.notification.create({
-                    data: {
-                      type: 'WARNING',
-                      title: 'Room Change Request Submitted',
-                      message: `${linkedResident.fullName} requested transfer from Room ${linkedResident.room.roomNumber} to Room ${targetRoom.roomNumber} via Google Form.`,
-                      linkUrl: '/rooms',
-                    },
-                  });
+                  if (!existingReq) {
+                    await prisma.roomChangeRequest.create({
+                      data: {
+                        residentId: linkedResident.id,
+                        currentRoomId: linkedResident.roomId,
+                        requestedRoomId: targetRoom.id,
+                        reason: 'Submitted via Google Form Response Edit',
+                        source: 'GOOGLE_FORM',
+                        status: 'PENDING',
+                      },
+                    });
 
-                  roomChangeRequestsCount++;
-                  changesDetectedCount++;
-                  updatedCount++;
+                    await prisma.notification.create({
+                      data: {
+                        type: 'WARNING',
+                        title: 'Room Change Request Submitted',
+                        message: `${linkedResident.fullName} requested transfer from Room ${linkedResident.room.roomNumber} to Room ${targetRoom.roomNumber} via Google Form.`,
+                        linkUrl: '/rooms',
+                      },
+                    });
+
+                    roomChangeRequestsCount++;
+                  }
                 } else {
-                  skippedCount++;
+                  errors.push(`Row ${rowIndex} (${fullName}): Target Room ${requestedRoomNumber} not found.`);
+                  validationErrorCount++;
                 }
-              } else {
-                errors.push(`Row ${rowIndex} (${fullName}): Target Room ${requestedRoomNumber} not found.`);
-                validationErrorCount++;
               }
-            } else if (!residentUpdated) {
-              skippedCount++;
             }
-          } else {
-            skippedCount++;
           }
         } else {
+          // ZERO CHANGES DETECTED -> SKIP
           skippedCount++;
         }
       }
     }
 
     const durationMs = Date.now() - startTime;
-
-    // 5. Record Synchronization Audit Log
-    await prisma.syncLog.create({
-      data: {
-        source: 'GOOGLE_SHEETS',
-        status: errors.length === 0 ? 'SUCCESS' : 'SUCCESS_WITH_WARNINGS',
-        rowsScanned,
-        newCount,
-        updatedCount,
-        skippedCount,
-        errorCount: validationErrorCount + systemErrorCount,
-        details: JSON.stringify({
-          triggeredBy,
-          changesDetectedCount,
-          roomChangeRequestsCount,
-          errors: errors.slice(0, 10),
-          durationMs,
-        }),
-        durationMs,
-        completedAt: new Date(),
-      },
-    });
-
-    await prisma.auditLog.create({
-      data: {
-        adminName: triggeredBy,
-        action: 'SYNC_GOOGLE_SHEETS',
-        entityType: 'SYNC',
-        details: JSON.stringify({
-          rowsScanned,
-          newCount,
-          updatedCount,
-          changesDetectedCount,
-          roomChangeRequestsCount,
-          skippedCount,
-          validationErrorCount,
-          durationMs,
-        }),
-      },
-    });
 
     return {
       success: true,
@@ -711,21 +660,6 @@ export async function synchronizeGoogleFormResponses(triggeredBy: string = 'SYST
   } catch (err: any) {
     const durationMs = Date.now() - startTime;
     systemErrorCount++;
-
-    await prisma.syncLog.create({
-      data: {
-        source: 'GOOGLE_SHEETS',
-        status: 'ERROR',
-        rowsScanned,
-        newCount,
-        updatedCount,
-        skippedCount,
-        errorCount: validationErrorCount + systemErrorCount,
-        details: JSON.stringify({ error: err.message, stack: err.stack }),
-        durationMs,
-        completedAt: new Date(),
-      },
-    });
 
     try {
       await prisma.notification.create({

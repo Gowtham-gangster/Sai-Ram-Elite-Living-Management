@@ -43,19 +43,6 @@ export async function POST(
       },
     });
 
-    await prisma.auditLog.create({
-      data: {
-        adminName,
-        action: 'REJECT_REGISTRATION',
-        entityType: 'REGISTRATION',
-        entityId: id,
-        details: JSON.stringify({
-          fullName: registration.fullName,
-          rejectionReason: rejectionReason.trim(),
-        }),
-      },
-    });
-
     return NextResponse.json({
       success: true,
       message: `Registration for ${registration.fullName} has been rejected.`,

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
-import { createAuditLog } from '@/lib/audit';
 
 export async function PATCH(
   request: NextRequest,
@@ -54,15 +53,6 @@ export async function PATCH(
     } else {
       return NextResponse.json({ error: 'Invalid action. Supported: CANCEL, RETRY, MARK_FAILED' }, { status: 400 });
     }
-
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: `REMINDER_${action}`,
-      entityType: 'REMINDER',
-      entityId: id,
-      details: { resident: reminder.resident.fullName, previousStatus: reminder.status, newStatus: updated.status },
-    });
 
     return NextResponse.json({ success: true, reminder: updated });
   } catch (error: any) {

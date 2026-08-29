@@ -87,7 +87,6 @@ export default function DashboardPage() {
   const visualizations = data?.visualizations || {};
   const recentResidents = visualizations?.recentResidents || [];
   const recentPayments = visualizations?.recentPayments || [];
-  const recentAuditLogs = visualizations?.recentAuditLogs || [];
   const floorBreakdown = visualizations?.floorBreakdown || [];
 
   if (isLoading) {
@@ -520,39 +519,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Recent System Audit Activity */}
-          <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4 shadow-xl">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                <Activity className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-white">System Activity</h2>
-                <p className="text-[11px] text-slate-400">Audit trail & synchronization logs</p>
-              </div>
-            </div>
-
-            <div className="space-y-2.5 pt-1">
-              {recentAuditLogs.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-4">No recent activity logged</p>
-              ) : (
-                recentAuditLogs.map((log: any) => (
-                  <div key={log.id} className="p-2.5 rounded-2xl bg-slate-950/40 border border-slate-800/60 text-xs">
-                    <div className="flex items-center justify-between text-[11px] font-semibold text-slate-300">
-                      <span className="text-amber-400">{log.action.replace(/_/g, ' ')}</span>
-                      <span className="text-slate-500 text-[10px]">
-                        {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-1">
-                      By: <span className="text-slate-300">{log.adminName}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
           </div>
         </div>
       </div>

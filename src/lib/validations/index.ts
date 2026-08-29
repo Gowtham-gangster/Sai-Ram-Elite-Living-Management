@@ -17,6 +17,7 @@ export const RoomSchema = z.object({
   sharingType: z.enum(['SINGLE', 'DOUBLE', 'TRIPLE', 'FOUR_SHARE', 'DORMITORY', 'OTHER']),
   amenities: z.array(z.string()).default([]),
   status: z.enum(['AVAILABLE', 'FULL', 'MAINTENANCE']).default('AVAILABLE'),
+  paymentEnabled: z.boolean().default(true),
   notes: z.string().optional().nullable(),
 });
 
@@ -37,7 +38,12 @@ export const ResidentSchema = z.object({
   email: z.string().email('Invalid email address').optional().or(z.literal('')).nullable(),
   roomId: z.string().min(1, 'Room assignment is required'),
   monthlyRent: z.coerce.number().min(0, 'Monthly rent cannot be negative').default(0),
-  securityDeposit: z.coerce.number().min(0, 'Security deposit cannot be negative').default(2000),
+  securityDeposit: z
+    .string()
+    .optional()
+    .nullable()
+    .or(z.number().transform((v) => String(v)))
+    .or(z.literal('')),
   checkInDate: z.string().or(z.date()),
   expectedCheckoutDate: z.string().or(z.date()).optional().or(z.literal('')).nullable(),
   checkOutDate: z.string().or(z.date()).optional().or(z.literal('')).nullable(),
@@ -99,7 +105,7 @@ export const GenerateDuesSchema = z.object({
   billingMonth: z.string().regex(/^\d{4}-\d{2}$/, 'Billing month must be in YYYY-MM format (e.g. 2026-08)'),
 });
 
-// Settings Schema (Rent Due Rules & Penalties removed)
+// Settings Schema (Bank details managed via .env)
 export const HostelSettingsSchema = z.object({
   hostelName: z.string().min(2, 'Hostel name is required').trim(),
   hostelAddress: z.string().min(5, 'Hostel address is required').trim(),
@@ -107,12 +113,6 @@ export const HostelSettingsSchema = z.object({
   whatsAppNumber: z.string().min(5, 'WhatsApp number is required').trim(),
   contactEmail: z.string().email('Invalid contact email').trim(),
   websiteUrl: z.string().url('Invalid website URL format (e.g. https://sairameliteliving.com)').or(z.literal('')).optional().nullable(),
-  bankName: z.string().min(2, 'Bank name is required').trim(),
-  accountHolderName: z.string().min(2, 'Account holder name is required').trim(),
-  accountNumber: z.string().min(5, 'Account number is required').trim(),
-  ifscCode: z.string().min(4, 'IFSC code is required').trim().toUpperCase(),
-  upiId: z.string().min(3, 'UPI ID is required').trim(),
-  paymentInstructions: z.string().optional().nullable(),
   rulesAndRegulations: z.string().optional().nullable(),
 });
 

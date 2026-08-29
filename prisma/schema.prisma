@@ -18,7 +18,6 @@ model AdminUser {
   lastLoginAt  DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
-  auditLogs    AuditLog[]
 
   @@index([email])
   @@index([role])
@@ -33,6 +32,7 @@ model Room {
   sharingType         String               @default("SINGLE") // SINGLE, DOUBLE, TRIPLE, FOUR_SHARE, FIVE_SHARE
   amenities           String               @default("[]") // JSON stringified array of amenities
   status              String               @default("AVAILABLE") // AVAILABLE, FULL, MAINTENANCE
+  paymentEnabled      Boolean              @default(true) // Set false to exclude room from rent & payment management
   notes               String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -45,6 +45,7 @@ model Room {
   @@index([roomNumber])
   @@index([floor])
   @@index([status])
+  @@index([paymentEnabled])
 }
 
 // 3. Residents Model (Direct Room relationship - NO BEDS)
@@ -61,8 +62,8 @@ model Resident {
   
   // Pricing agreement
   monthlyRent           Float               @default(0.0) // Agreed monthly rent
-  securityDeposit       Float               @default(2000.0) // Agreed security deposit
-  
+  securityDeposit       String?             // Stored Google Form short answer response / text
+
   // Tenancy dates
   checkInDate           DateTime            @default(now())
   expectedCheckoutDate  DateTime?
@@ -71,6 +72,8 @@ model Resident {
   // KYC & Emergency contact
   idProofType           String?             // AADHAAR, PAN, PASSPORT, DRIVING_LICENSE, VOTER_ID
   idProofNumber         String?
+  identityDocumentUrl   String?
+  googleDriveFileId     String?
   emergencyContactName  String?
   emergencyContactPhone String?
   address               String?
@@ -110,7 +113,7 @@ model Registration {
   requestedRoomNumber    String?
   checkInDate            DateTime?
   monthlyRent            Float?    @default(0.0) // Monthly rent indicated in Google Form intake
-  securityDeposit        Float?    @default(2000.0)
+  securityDeposit        String?   // Exact Google Form short answer string response
   declarationAccepted    Boolean   @default(false)
   declarationAcceptedAt  DateTime?
   sourceSubmittedAt      DateTime?
@@ -179,7 +182,9 @@ model MonthlyPayment {
   // Automated Reminder Timeline Tracking
   firstReminderSentAt  DateTime?
   secondReminderSentAt DateTime?
-  reminderStatus       String          @default("IDLE") // IDLE, FIRST_REMINDER_SENT, SECOND_REMINDER_SENT, COMPLETED, CANCELLED
+  lastReminderSentAt   DateTime?
+  reminderCount        Int             @default(0)
+  reminderStatus       String          @default("IDLE") // IDLE, FIRST_REMINDER_SENT, DUE_REMINDER_SENT, RECURRING_REMINDER_SENT, COMPLETED, CANCELLED
   
   transactionReference String?
   paymentProofUrl      String?
@@ -281,6 +286,10 @@ model Receipt {
   generatedBy      String         @default("Admin")
   notes            String?
   googleDriveFileId String?
+  googleDriveFolderId String?
+  receiptFileName   String?
+  driveUploadStatus String?        @default("READY") // READY, PENDING_UPLOAD, SUCCESS, FAILED
+  driveUploadedAt   DateTime?
   status           String         @default("READY") // PENDING, GENERATING, READY, FAILED
   downloadToken    String?        @unique
   createdAt        DateTime       @default(now())
@@ -291,9 +300,10 @@ model Receipt {
   @@index([billingMonth])
   @@index([downloadToken])
   @@index([googleDriveFileId])
+  @@index([googleDriveFolderId])
 }
 
-// 9. Payment Reminders Model (Idempotent 2-Stage Automated WhatsApp Reminders)
+// 9. Payment Reminders Model (Idempotent Automated Recurring WhatsApp Reminders)
 model PaymentReminder {
   id                String          @id @default(cuid())
   residentId        String
@@ -301,7 +311,9 @@ model PaymentReminder {
   monthlyPaymentId  String?
   monthlyPayment    MonthlyPayment? @relation(fields: [monthlyPaymentId], references: [id], onDelete: SetNull)
   
-  reminderType      String          // FIRST_DUE_REMINDER, SECOND_REMINDER
+  reminderType      String          // FIRST_DUE_REMINDER, DUE_DATE_REMINDER, OVERDUE_REMINDER, RECURRING_REMINDER
+  sequence          Int             @default(1) // 1=D-2, 2=Due Date, 3=D+2, 4=D+4...
+  overdueDays       Int             @default(0) // 0 for D-2 and Due Date, 2, 4, 6... for overdue
   channel           String          @default("WHATSAPP") // WHATSAPP, SMS, SYSTEM_NOTICE
   scheduledFor      DateTime
   sentAt            DateTime?
@@ -313,12 +325,13 @@ model PaymentReminder {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
-  @@unique([monthlyPaymentId, reminderType])
+  @@unique([monthlyPaymentId, sequence])
   @@index([residentId])
   @@index([monthlyPaymentId])
   @@index([status])
   @@index([reminderType])
   @@index([scheduledFor])
+  @@index([sequence])
 }
 
 // 10. Reminder Templates Model
@@ -333,27 +346,7 @@ model ReminderTemplate {
   updatedAt    DateTime @updatedAt
 }
 
-// 11. Synchronization Logs Model (Google Sheets Sync Tracking)
-model SyncLog {
-  id           String    @id @default(cuid())
-  source       String    @default("GOOGLE_SHEETS") // GOOGLE_SHEETS, GOOGLE_DRIVE
-  status       String    @default("SUCCESS") // SUCCESS, RUNNING, ERROR, CONFIG_ERROR
-  rowsScanned  Int       @default(0)
-  newCount     Int       @default(0)
-  updatedCount Int       @default(0)
-  skippedCount Int       @default(0)
-  errorCount   Int       @default(0)
-  details      String?   // JSON summary / error message
-  durationMs   Int       @default(0)
-  startedAt    DateTime  @default(now())
-  completedAt  DateTime?
-
-  @@index([source])
-  @@index([status])
-  @@index([startedAt])
-}
-
-// 12. Hostel Settings Model (Cleaned: Rent Due Rules & Penalties Removed)
+// 11. Hostel Settings Model (Cleaned: Rent Due Rules & Penalties Removed)
 model HostelSettings {
   id                  String   @id @default("default")
   hostelName          String   @default("SAIRAM ELITE LIVING")
@@ -375,7 +368,7 @@ model HostelSettings {
   updatedAt           DateTime @updatedAt
 }
 
-// 13. System Notifications Model
+// 12. System Notifications Model
 model Notification {
   id        String   @id @default(cuid())
   title     String
@@ -386,24 +379,5 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([isRead])
-  @@index([createdAt])
-}
-
-// 14. System Audit Logs Model
-model AuditLog {
-  id          String     @id @default(cuid())
-  adminUserId String?
-  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
-  adminName   String     @default("System")
-  action      String     // CREATE_ROOM, UPDATE_RESIDENT, RECORD_PAYMENT, UPDATE_SETTINGS, SYNC_GOOGLE_SHEETS, APPROVE_REGISTRATION, REJECT_REGISTRATION
-  entityType  String     // ROOM, RESIDENT, PAYMENT, SETTING, AUTH, REMINDER, REPORT, REGISTRATION, SYNC
-  entityId    String?
-  details     String?    // JSON metadata describing the change
-  ipAddress   String?
-  createdAt   DateTime   @default(now())
-
-  @@index([adminUserId])
-  @@index([entityType])
-  @@index([action])
   @@index([createdAt])
 }

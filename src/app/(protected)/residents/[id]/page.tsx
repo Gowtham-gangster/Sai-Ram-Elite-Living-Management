@@ -24,6 +24,7 @@ import {
   Loader2,
   UploadCloud,
   FileCheck,
+  ExternalLink,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Badge, StatusBadge, PaymentStatusBadge } from '@/components/ui/Badge';
@@ -36,7 +37,6 @@ export default function ResidentDetailPage() {
   const id = params?.id as string;
 
   const [resident, setResident] = useState<any>(null);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -58,7 +58,7 @@ export default function ResidentDetailPage() {
     checkInDate: '',
     expectedCheckoutDate: '',
     monthlyRent: 8000,
-    securityDeposit: 2000,
+    securityDeposit: '',
     status: 'ACTIVE',
     notes: '',
   });
@@ -78,7 +78,7 @@ export default function ResidentDetailPage() {
   const [checkoutData, setCheckoutData] = useState({
     checkOutDate: new Date().toISOString().split('T')[0],
     reason: 'Normal Checkout',
-    refundDepositAmount: 2000,
+    refundDepositAmount: 0,
     deductionsAmount: 0,
     notes: '',
   });
@@ -120,14 +120,10 @@ export default function ResidentDetailPage() {
           checkInDate: data.resident.checkInDate ? data.resident.checkInDate.split('T')[0] : '',
           expectedCheckoutDate: data.resident.expectedCheckoutDate ? data.resident.expectedCheckoutDate.split('T')[0] : '',
           monthlyRent: data.resident.monthlyRent || 8000,
-          securityDeposit: data.resident.securityDeposit || 2000,
+          securityDeposit: data.resident.securityDeposit ? String(data.resident.securityDeposit) : '',
           status: data.resident.status || 'ACTIVE',
           notes: data.resident.notes || '',
         });
-      }
-
-      if (data.auditLogs) {
-        setAuditLogs(data.auditLogs);
       }
 
       if (dataRooms.rooms) {
@@ -470,43 +466,60 @@ export default function ResidentDetailPage() {
 
           {/* Section 3: Payment Summary */}
           <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4 shadow-xl">
-            <h3 className="text-sm font-black text-white tracking-wide uppercase flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-amber-400" />
-              <span>Payment Summary</span>
-            </h3>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
-                <span className="text-[10px] text-slate-500 font-bold uppercase block">Current Month</span>
-                <span className="text-xs font-bold text-white">
-                  {latestPayment?.billingMonth || '2026-08'}
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-white tracking-wide uppercase flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-amber-400" />
+                <span>Payment Summary</span>
+              </h3>
+              {resident.room?.paymentEnabled === false && (
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  <span>Payment Management: Not Applicable</span>
                 </span>
-              </div>
-              <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
-                <span className="text-[10px] text-slate-500 font-bold uppercase block">Monthly Rent</span>
-                <span className="text-xs font-bold text-amber-400">
-                  ₹{Number(resident.monthlyRent).toLocaleString('en-IN')}
-                </span>
-              </div>
-              <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
-                <span className="text-[10px] text-slate-500 font-bold uppercase block">Payment Status</span>
-                <span className="mt-0.5 inline-block">
-                  {latestPayment ? (
-                    <PaymentStatusBadge status={latestPayment.status} />
-                  ) : (
-                    <span className="text-[10px] font-bold text-slate-400">Not generated</span>
-                  )}
-                </span>
-              </div>
-              <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
-                <span className="text-[10px] text-slate-500 font-bold uppercase block">Last Paid Date</span>
-                <span className="text-xs font-semibold text-slate-300">
-                  {latestPayment?.paidDate
-                    ? new Date(latestPayment.paidDate).toLocaleDateString('en-IN')
-                    : '—'}
-                </span>
-              </div>
+              )}
             </div>
+
+            {resident.room?.paymentEnabled === false ? (
+              <div className="p-4 rounded-2xl bg-slate-950/90 border border-slate-800 text-center space-y-1">
+                <p className="text-xs font-bold text-amber-400">Online Rent Collection Excluded</p>
+                <p className="text-[11px] text-slate-400">
+                  Room {resident.room?.roomNumber} is not managed under the hostel&apos;s rent collection system (e.g. owner/complimentary room).
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Current Month</span>
+                  <span className="text-xs font-bold text-white">
+                    {latestPayment?.billingMonth || '2026-08'}
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Monthly Rent</span>
+                  <span className="text-xs font-bold text-amber-400">
+                    ₹{Number(resident.monthlyRent).toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Payment Status</span>
+                  <span className="mt-0.5 inline-block">
+                    {latestPayment ? (
+                      <PaymentStatusBadge status={latestPayment.status} />
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-400">Not generated</span>
+                    )}
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Last Paid Date</span>
+                  <span className="text-xs font-semibold text-slate-300">
+                    {latestPayment?.paidDate
+                      ? new Date(latestPayment.paidDate).toLocaleDateString('en-IN')
+                      : '—'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -535,6 +548,13 @@ export default function ResidentDetailPage() {
                 </div>
               </div>
 
+              {resident.room?.paymentEnabled === false && (
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                  <span>Payment Management: <strong>Not Enabled for Room {resident.room?.roomNumber}</strong></span>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
                   <span className="text-slate-500 block text-[10px] font-bold uppercase">Check-in Date</span>
@@ -545,8 +565,11 @@ export default function ResidentDetailPage() {
                 <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
                   <span className="text-slate-500 block text-[10px] font-bold uppercase">Security Deposit</span>
                   <span className="font-semibold text-amber-400">
-                    ₹{Number(resident.securityDeposit || 2000).toLocaleString('en-IN')}{' '}
-                    <span className="text-[10px] text-slate-400 font-normal">(One-time)</span>
+                    {resident.securityDeposit !== null &&
+                    resident.securityDeposit !== undefined &&
+                    String(resident.securityDeposit).trim() !== ''
+                      ? resident.securityDeposit
+                      : 'Not provided'}
                   </span>
                 </div>
               </div>
@@ -569,19 +592,80 @@ export default function ResidentDetailPage() {
             </div>
           </div>
 
-          {/* Secure Document Storage Status */}
+          {/* Identity Documents */}
           <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4 shadow-xl">
-            <h3 className="text-sm font-black text-white tracking-wide uppercase flex items-center gap-2">
-              <FileCheck className="w-4 h-4 text-amber-400" />
-              <span>Identity Documents</span>
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-white tracking-wide uppercase flex items-center gap-2">
+                <FileCheck className="w-4 h-4 text-amber-400" />
+                <span>Identity Documents</span>
+              </h3>
+              {resident.googleDriveFileId || resident.identityDocumentUrl ? (
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Document Available</span>
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-[10px] font-bold">
+                  No Document Provided
+                </span>
+              )}
+            </div>
 
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs space-y-2 text-center">
-              <Shield className="w-6 h-6 text-amber-400 mx-auto" />
-              <p className="font-bold text-slate-200">Private Document Vault</p>
-              <p className="text-[11px] text-slate-500">
-                Aadhaar card & college/work proof stored in authenticated Supabase private storage (`resident-documents`).
-              </p>
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs space-y-3">
+              {resident.googleDriveFileId || resident.identityDocumentUrl ? (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-900/90 border border-slate-800">
+                    <FileText className="w-8 h-8 text-amber-400 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5 min-w-0">
+                      <p className="font-bold text-white text-xs truncate">
+                        {resident.fullName}&apos;s ID Proof
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        Google Drive Attachment • Uploaded via Google Form
+                      </p>
+                      {resident.idProofNumber && (
+                        <p className="text-[11px] text-slate-400">
+                          ID Number: <span className="font-mono text-slate-300">{maskAadhaar(resident.idProofNumber)}</span>
+                        </p>
+                      )}
+                      {resident.googleDriveFileId && (
+                        <p className="text-[10px] font-mono text-slate-500 truncate">
+                          File ID: {resident.googleDriveFileId}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    {(() => {
+                      const directDriveUrl =
+                        resident.identityDocumentUrl ||
+                        (resident.googleDriveFileId
+                          ? `https://drive.google.com/file/d/${resident.googleDriveFileId}/view?usp=drivesdk`
+                          : null);
+
+                      return (
+                        <a
+                          href={directDriveUrl || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20 transition-all active:scale-[0.99]"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>View Document</span>
+                          <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                        </a>
+                      );
+                    })()}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4 space-y-1 text-slate-500">
+                  <Shield className="w-6 h-6 text-slate-600 mx-auto" />
+                  <p className="font-semibold text-xs text-slate-400">Private Document Vault</p>
+                  <p className="text-[11px]">No identity document was provided with the registration.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -690,12 +774,13 @@ export default function ResidentDetailPage() {
 
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-300">
-                Security Deposit (₹) <span className="text-[10px] text-slate-400 font-normal">(One-time)</span>
+                Security Deposit <span className="text-[10px] text-slate-400 font-normal">(Intake / Note)</span>
               </label>
               <input
-                type="number"
+                type="text"
+                placeholder="e.g. 2000, Yes, Paid, etc."
                 value={formData.securityDeposit}
-                onChange={(e) => setFormData({ ...formData, securityDeposit: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, securityDeposit: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white focus:ring-2 focus:ring-amber-500 font-medium"
               />
             </div>

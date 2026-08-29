@@ -64,7 +64,9 @@ export interface Resident {
   check_in_date: string;
   expected_checkout_date?: string | null;
   actual_checkout_date?: string | null;
-  security_deposit: number;
+  security_deposit?: string | null;
+  identity_document_url?: string | null;
+  google_drive_file_id?: string | null;
   agreed_monthly_rent: number;
   status: ResidentStatus;
   declaration_accepted: boolean;
@@ -101,7 +103,7 @@ export interface Registration {
   company_or_college_name?: string | null;
   requested_room_number?: string | null;
   check_in_date?: string | null;
-  security_deposit?: number | null;
+  security_deposit?: string | null;
   declaration_accepted: boolean;
   declaration_accepted_at?: string | null;
   source_submitted_at?: string | null;
@@ -206,18 +208,6 @@ export interface HostelSettings {
   updated_at: string;
 }
 
-export interface AuditLog {
-  id: string; // UUID
-  user_id?: string | null;
-  user_email?: string | null;
-  action: string;
-  entity_type: string;
-  entity_id?: string | null;
-  old_values?: Record<string, any> | null;
-  new_values?: Record<string, any> | null;
-  ip_address?: string | null;
-  created_at: string;
-}
 
 export interface RoomOccupancyView {
   room_id: string;

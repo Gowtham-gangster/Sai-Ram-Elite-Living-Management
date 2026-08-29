@@ -58,6 +58,7 @@ export default function RoomsPage() {
     capacity: 2,
     sharingType: 'DOUBLE',
     status: 'AVAILABLE',
+    paymentEnabled: true,
     notes: '',
   });
 
@@ -147,6 +148,7 @@ export default function RoomsPage() {
       capacity: 2,
       sharingType: 'DOUBLE',
       status: 'AVAILABLE',
+      paymentEnabled: true,
       notes: '',
     });
     setActionError(null);
@@ -161,6 +163,7 @@ export default function RoomsPage() {
       capacity: room.capacity,
       sharingType: room.sharingType,
       status: room.status,
+      paymentEnabled: room.paymentEnabled !== undefined ? room.paymentEnabled : true,
       notes: room.notes || '',
     });
     setActionError(null);
@@ -639,6 +642,41 @@ export default function RoomsPage() {
               <option value="MAINTENANCE">Maintenance</option>
               <option value="INACTIVE">Inactive</option>
             </select>
+          </div>
+
+          {/* Payment Management Exclusion Setting */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 space-y-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <label className="text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer">
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                  Rent & Payment Management
+                </label>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Disable this option for rooms that are not part of the hostel's rent collection system (e.g. owner, staff, or complimentary rooms).
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={formData.paymentEnabled}
+                  onChange={(e) => setFormData({ ...formData, paymentEnabled: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+            <div className="text-[11px] pt-1 border-t border-slate-800">
+              {formData.paymentEnabled ? (
+                <span className="text-emerald-400 font-medium flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Normal hostel rent & payment management enabled
+                </span>
+              ) : (
+                <span className="text-amber-400 font-medium flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" /> Excluded from rent collection, dues generation & payment reminders
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="space-y-1.5">

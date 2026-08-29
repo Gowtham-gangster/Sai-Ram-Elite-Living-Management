@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
         room: {
           select: {
             roomNumber: true,
+            paymentEnabled: true,
           },
         },
         monthlyPayments: {
@@ -62,21 +63,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ authenticated: false }, { status: 200 });
     }
 
-    const pendingPayment = resident.monthlyPayments.find(
-      (p) => p.status === 'PENDING' || p.status === 'OVERDUE' || p.status === 'SUBMITTED' || p.status === 'PARTIALLY_PAID'
-    );
-    const selectedPayment = pendingPayment || resident.monthlyPayments[0] || null;
+    const isPaymentManaged = resident.room ? resident.room.paymentEnabled !== false : true;
+
+    const pendingPayment = isPaymentManaged
+      ? resident.monthlyPayments.find(
+          (p) => p.status === 'PENDING' || p.status === 'OVERDUE' || p.status === 'SUBMITTED' || p.status === 'PARTIALLY_PAID'
+        )
+      : null;
+    const selectedPayment = isPaymentManaged ? (pendingPayment || resident.monthlyPayments[0] || null) : null;
     const tenDigit = resident.phone.replace(/[^\d]/g, '').slice(-10);
     const maskedPhone = `+91 ••••• ••${tenDigit.slice(-4)}`;
 
     return NextResponse.json({
       authenticated: true,
+      isPaymentManaged,
       resident: {
         id: resident.id,
         name: resident.fullName,
         roomNumber: resident.room?.roomNumber || 'Unassigned',
         maskedMobile: maskedPhone,
         status: resident.status,
+        isPaymentManaged,
       },
       payment: selectedPayment
         ? {

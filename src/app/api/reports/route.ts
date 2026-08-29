@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
       floor: r.room.floor,
       sharingType: formatSharingType(r.room.sharingType),
       agreedMonthlyRent: r.monthlyRent || 0,
-      securityDeposit: r.securityDeposit || 0,
+      securityDeposit: r.securityDeposit || 'N/A',
       checkInDate: r.checkInDate,
       expectedCheckoutDate: r.expectedCheckoutDate || null,
       checkOutDate: r.checkOutDate || null,
@@ -88,7 +88,10 @@ export async function GET(request: NextRequest) {
       const activeCount = rm.residents.length;
       const vacantSlots = Math.max(0, rm.capacity - activeCount);
       const occupancyRate = rm.capacity > 0 ? Math.round((activeCount / rm.capacity) * 100) : 0;
-      const currentRealizedRevenue = rm.residents.reduce((sum, res) => sum + (res.monthlyRent || 0), 0);
+      const isPaymentManaged = rm.paymentEnabled !== false;
+      const currentRealizedRevenue = isPaymentManaged
+        ? rm.residents.reduce((sum, res) => sum + (res.monthlyRent || 0), 0)
+        : 0;
 
       return {
         roomId: rm.id,
@@ -100,6 +103,8 @@ export async function GET(request: NextRequest) {
         availableSlots: vacantSlots,
         occupancyRatePercentage: occupancyRate,
         currentRealizedRevenue,
+        paymentEnabled: isPaymentManaged,
+        paymentManagementStatus: isPaymentManaged ? 'Enabled' : 'Not Applicable',
         status: rm.status,
         residents: rm.residents.map((res) => res.fullName).join(', ') || 'None',
       };
@@ -128,7 +133,7 @@ export async function GET(request: NextRequest) {
 
     // 4. PENDING PAYMENT REPORT
     const pendingPaymentReport = allPayments
-      .filter((p) => p.status === 'PENDING' || p.status === 'SUBMITTED')
+      .filter((p) => (p.status === 'PENDING' || p.status === 'SUBMITTED') && (p.room as any)?.paymentEnabled !== false)
       .map((p) => {
         const daysPending = Math.max(0, Math.ceil((now.getTime() - new Date(p.dueDate).getTime()) / (1000 * 60 * 60 * 24)));
         return {
@@ -146,7 +151,7 @@ export async function GET(request: NextRequest) {
 
     // 5. OVERDUE PAYMENT REPORT
     const overduePaymentReport = allPayments
-      .filter((p) => p.status === 'OVERDUE' || (p.status === 'PENDING' && new Date(p.dueDate) < now))
+      .filter((p) => (p.status === 'OVERDUE' || (p.status === 'PENDING' && new Date(p.dueDate) < now)) && (p.room as any)?.paymentEnabled !== false)
       .map((p) => {
         const daysOverdue = Math.max(1, Math.ceil((now.getTime() - new Date(p.dueDate).getTime()) / (1000 * 60 * 60 * 24)));
 
@@ -194,7 +199,7 @@ export async function GET(request: NextRequest) {
           checkInDate: r.checkInDate,
           checkOutDate: r.checkOutDate,
           stayDurationDays,
-          securityDeposit: r.securityDeposit || 0,
+          securityDeposit: r.securityDeposit || 'N/A',
           status: r.status,
           notes: r.notes || 'Normal checkout',
         };

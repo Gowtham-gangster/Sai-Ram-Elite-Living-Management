@@ -95,7 +95,7 @@ export default function ReportsPage() {
           'Alternate Phone': r.alternatePhone || 'N/A',
           'Email': r.email || 'N/A',
           'Agreed Monthly Rent (₹)': Number(r.agreedMonthlyRent),
-          'Security Deposit — One-Time (₹)': Number(r.securityDeposit),
+          'Security Deposit': r.securityDeposit ? String(r.securityDeposit) : 'N/A',
           'Check-in Date': r.checkInDate ? new Date(r.checkInDate).toISOString().slice(0, 10) : 'N/A',
           'Expected Checkout Date': r.expectedCheckoutDate ? new Date(r.expectedCheckoutDate).toISOString().slice(0, 10) : 'N/A',
           'ID Proof Type': r.idProofType,
@@ -165,7 +165,7 @@ export default function ReportsPage() {
           'Check-in Date': c.checkInDate ? new Date(c.checkInDate).toISOString().slice(0, 10) : 'N/A',
           'Checkout Date': c.checkOutDate ? new Date(c.checkOutDate).toISOString().slice(0, 10) : 'N/A',
           'Stay Duration (Days)': Number(c.stayDurationDays),
-          'Security Deposit (₹)': Number(c.securityDeposit),
+          'Security Deposit': c.securityDeposit ? String(c.securityDeposit) : 'N/A',
           'Status': c.status,
           'Notes': c.notes,
         }));
@@ -218,7 +218,7 @@ export default function ReportsPage() {
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time occupancy tracking, financial census, collections, and resident audit reports.
+            Real-time occupancy tracking, financial census, collections, and resident census reports.
           </p>
         </div>
 
@@ -553,7 +553,7 @@ export default function ReportsPage() {
                         <td className="p-3">Room {c.roomNumber}</td>
                         <td className="p-3">{c.stayDurationDays} days</td>
                         <td className="p-3">{formatIndianDate(c.checkOutDate)}</td>
-                        <td className="p-3 font-bold text-slate-200">{formatCurrency(c.securityDeposit)}</td>
+                        <td className="p-3 font-bold text-slate-200">{c.securityDeposit ? String(c.securityDeposit) : 'N/A'}</td>
                       </tr>
                     ))}
                   </tbody>

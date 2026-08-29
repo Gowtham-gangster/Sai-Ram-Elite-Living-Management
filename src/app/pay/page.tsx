@@ -34,6 +34,7 @@ interface ResidentData {
   roomNumber: string;
   maskedMobile: string;
   status: string;
+  isPaymentManaged?: boolean;
 }
 
 interface PaymentData {
@@ -605,8 +606,21 @@ export default function ResidentPaymentPortal() {
                   </div>
                 </div>
 
-                {/* Payment Dues Card */}
-                {payment ? (
+                {/* Payment Dues Card or Exclusion Notice */}
+                {resident.isPaymentManaged === false ? (
+                  <div className="p-6 rounded-3xl bg-slate-900 border border-amber-500/30 text-center space-y-3 shadow-xl">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto text-amber-400">
+                      <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-base font-black text-white">Online Rent Payment Not Applicable</h3>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Online rent collection is currently not enabled for <strong>Room {resident.roomNumber}</strong>. Please contact the hostel administrator if you have any questions.
+                    </p>
+                    <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-400">
+                      Hostel Office • Sai Ram Elite Living Management
+                    </div>
+                  </div>
+                ) : payment ? (
                   <div className="p-5 rounded-3xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 shadow-xl space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">

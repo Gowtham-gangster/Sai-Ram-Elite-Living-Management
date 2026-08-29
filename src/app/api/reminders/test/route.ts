@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
-import { createAuditLog } from '@/lib/audit';
 import {
   WhatsAppService,
   ResidentReminderInput,
@@ -60,6 +59,9 @@ export async function POST(request: NextRequest) {
     const amountDue = payment?.totalAmountDue ?? resident.monthlyRent;
     const dueDate = payment?.dueDate || new Date();
 
+    const sequence = typeof body.sequence === 'number' ? body.sequence : (reminderType === 'OVERDUE_REMINDER' ? 3 : (reminderType === 'DUE_DATE_REMINDER' ? 2 : 1));
+    const overdueDays = typeof body.overdueDays === 'number' ? body.overdueDays : (sequence >= 3 ? 2 * (sequence - 2) : 0);
+
     const input: ResidentReminderInput = {
       residentId: resident.id,
       residentName: resident.fullName,
@@ -68,26 +70,12 @@ export async function POST(request: NextRequest) {
       billingMonth: formatBillingMonthDisplay(billingMonth),
       amountDue,
       dueDateFormatted: formatKolkataDisplayDate(dueDate),
-      reminderType: reminderType === 'SECOND_REMINDER' ? 'SECOND_REMINDER' : 'FIRST_DUE_REMINDER',
+      reminderType: reminderType as any,
+      sequence,
+      overdueDays,
     };
 
     const result = await WhatsAppService.sendPaymentReminder(input);
-
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: 'TEST_WHATSAPP_REMINDER',
-      entityType: 'REMINDER',
-      entityId: payment?.id || resident.id,
-      details: {
-        residentName: resident.fullName,
-        recipientPhone: phoneNorm.e164,
-        reminderType: input.reminderType,
-        success: result.success,
-        messageId: result.messageId,
-        error: result.error,
-      },
-    });
 
     return NextResponse.json({
       success: result.success,

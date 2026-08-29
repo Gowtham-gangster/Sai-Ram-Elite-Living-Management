@@ -41,21 +41,6 @@ export async function POST(
       },
     });
 
-    await prisma.auditLog.create({
-      data: {
-        adminName,
-        action: 'REJECT_ROOM_CHANGE',
-        entityType: 'ROOM_CHANGE_REQUEST',
-        entityId: id,
-        details: JSON.stringify({
-          residentName: changeRequest.resident.fullName,
-          fromRoom: changeRequest.currentRoom.roomNumber,
-          toRoom: changeRequest.requestedRoom.roomNumber,
-          rejectionReason,
-        }),
-      },
-    });
-
     return NextResponse.json({
       success: true,
       message: `Room change request for ${changeRequest.resident.fullName} rejected. Resident remains in Room ${changeRequest.currentRoom.roomNumber}.`,

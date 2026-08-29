@@ -37,7 +37,6 @@ export default function RegistrationDetailPage() {
 
   const [registration, setRegistration] = useState<any>(null);
   const [roomInfo, setRoomInfo] = useState<any>(null);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Aadhaar masking
@@ -66,7 +65,6 @@ export default function RegistrationDetailPage() {
       if (data.registration) {
         setRegistration(data.registration);
         setRoomInfo(data.roomInfo);
-        setAuditLogs(data.auditLogs || []);
       }
     } catch (err) {
       console.error('Failed to fetch registration:', err);
@@ -85,7 +83,7 @@ export default function RegistrationDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           roomNumber: registration.requestedRoomNumber,
-          securityDeposit: registration.securityDeposit || 2000,
+          securityDeposit: registration.securityDeposit ?? undefined,
         }),
       });
 
@@ -194,12 +192,20 @@ export default function RegistrationDetailPage() {
                 {registration.fullName}
               </h1>
               <StatusBadge status={registration.status} />
+              {new Date(registration.updatedAt).getTime() - new Date(registration.createdAt).getTime() > 2000 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                  Updated via Google Forms
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Source: <span className="font-semibold text-slate-300">Google Form Submission</span> • Submitted{' '}
               {registration.sourceSubmittedAt
                 ? new Date(registration.sourceSubmittedAt).toLocaleString('en-IN')
                 : new Date(registration.createdAt).toLocaleString('en-IN')}
+              {new Date(registration.updatedAt).getTime() - new Date(registration.createdAt).getTime() > 2000 && (
+                <> • Last Synchronized: <span className="text-slate-300 font-medium">{new Date(registration.updatedAt).toLocaleString('en-IN')}</span></>
+              )}
             </p>
           </div>
         </div>
@@ -430,7 +436,11 @@ export default function RegistrationDetailPage() {
                 <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800">
                   <span className="text-slate-500 block text-[10px] font-bold uppercase">Security Deposit</span>
                   <span className="font-semibold text-slate-200">
-                    ₹{Number(registration.securityDeposit || 2000).toLocaleString('en-IN')}
+                    {registration.securityDeposit !== null &&
+                    registration.securityDeposit !== undefined &&
+                    String(registration.securityDeposit).trim() !== ''
+                      ? registration.securityDeposit
+                      : 'Not provided'}
                   </span>
                 </div>
               </div>
@@ -534,7 +544,13 @@ export default function RegistrationDetailPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Security Deposit:</span>
-              <span className="font-semibold text-slate-200">₹{registration.securityDeposit || 2000}</span>
+              <span className="font-semibold text-slate-200">
+                {registration.securityDeposit !== null &&
+                registration.securityDeposit !== undefined &&
+                String(registration.securityDeposit).trim() !== ''
+                  ? registration.securityDeposit
+                  : 'Not provided'}
+              </span>
             </div>
           </div>
 

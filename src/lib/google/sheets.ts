@@ -25,7 +25,7 @@ export interface MappedGoogleFormRegistration {
   company_or_college_name?: string | null;
   requested_room_number?: string | null;
   check_in_date?: string | null;
-  security_deposit?: number | null;
+  security_deposit?: string | null;
   identity_document_url?: string | null;
   declaration_accepted: boolean;
   raw_row_data: Record<string, any>;

@@ -7,7 +7,7 @@ import {
   NoticePeriodSchema,
   CheckOutResidentSchema,
 } from '@/lib/validations';
-import { createAuditLog } from '@/lib/audit';
+import { createNotification } from '@/lib/notifications';
 
 export async function GET(
   request: NextRequest,
@@ -41,17 +41,7 @@ export async function GET(
       return NextResponse.json({ error: 'Resident not found' }, { status: 404 });
     }
 
-    // Fetch related audit logs
-    const auditLogs = await db.auditLog.findMany({
-      where: {
-        entityType: 'RESIDENT',
-        entityId: id,
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-    });
-
-    return NextResponse.json({ resident, auditLogs });
+    return NextResponse.json({ resident });
   } catch (error: any) {
     console.error('Error fetching resident profile:', error);
     return NextResponse.json({ error: 'Failed to fetch resident profile' }, { status: 500 });
@@ -74,26 +64,28 @@ export async function PUT(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Invalid resident details', details: parsed.error.format() },
+        { error: 'Invalid resident input', details: parsed.error.format() },
         { status: 400 }
       );
     }
 
     const data = parsed.data;
 
-    // Check phone uniqueness
-    const phoneConflict = await db.resident.findFirst({
-      where: {
-        phone: data.phone,
-        NOT: { id },
-      },
-    });
+    // Check if phone number is taken by another resident
+    if (data.phone) {
+      const existingPhone = await db.resident.findFirst({
+        where: {
+          phone: data.phone,
+          NOT: { id },
+        },
+      });
 
-    if (phoneConflict) {
-      return NextResponse.json(
-        { error: `Phone number ${data.phone} belongs to another resident (${phoneConflict.fullName}).` },
-        { status: 409 }
-      );
+      if (existingPhone) {
+        return NextResponse.json(
+          { error: `Phone number ${data.phone} is already assigned to another resident (${existingPhone.fullName}).` },
+          { status: 409 }
+        );
+      }
     }
 
     const updatedResident = await db.resident.update({
@@ -103,12 +95,13 @@ export async function PUT(
         phone: data.phone,
         alternatePhone: data.alternatePhone || null,
         email: data.email || null,
+        roomId: data.roomId,
         monthlyRent: data.monthlyRent,
-        securityDeposit: data.securityDeposit,
+        securityDeposit: data.securityDeposit !== undefined && data.securityDeposit !== null ? String(data.securityDeposit) : null,
         checkInDate: new Date(data.checkInDate),
         expectedCheckoutDate: data.expectedCheckoutDate ? new Date(data.expectedCheckoutDate) : null,
         checkOutDate: data.checkOutDate ? new Date(data.checkOutDate) : null,
-        idProofType: data.idProofType || null,
+        idProofType: data.idProofType || 'AADHAAR',
         idProofNumber: data.idProofNumber || null,
         emergencyContactName: data.emergencyContactName || null,
         emergencyContactPhone: data.emergencyContactPhone || null,
@@ -116,15 +109,6 @@ export async function PUT(
         status: data.status,
         notes: data.notes || null,
       },
-    });
-
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: 'UPDATE_RESIDENT',
-      entityType: 'RESIDENT',
-      entityId: id,
-      details: { residentName: updatedResident.fullName, phone: updatedResident.phone },
     });
 
     return NextResponse.json({ success: true, resident: updatedResident });
@@ -208,7 +192,6 @@ export async function PATCH(
       });
 
       // Update room statuses
-      // Check old room count
       const oldRoomActive = await db.resident.count({
         where: { roomId: oldRoomId, status: { in: ['ACTIVE', 'NOTICE_PERIOD'] } },
       });
@@ -216,24 +199,16 @@ export async function PATCH(
         await db.room.update({ where: { id: oldRoomId }, data: { status: 'AVAILABLE' } });
       }
 
-      // Check new room count
       if (targetCount + 1 >= targetRoom.capacity) {
         await db.room.update({ where: { id: newRoomId }, data: { status: 'FULL' } });
       }
 
-      // Log Audit Trail
-      await createAuditLog({
-        adminUserId: session.userId,
-        adminName: session.name,
-        action: 'CHANGE_ROOM',
-        entityType: 'RESIDENT',
-        entityId: id,
-        details: {
-          residentName: resident.fullName,
-          fromRoom: oldRoomNumber,
-          toRoom: targetRoom.roomNumber,
-          notes: notes || null,
-        },
+      // Notification
+      await createNotification({
+        title: 'Room Transfer Completed',
+        message: `${resident.fullName} transferred from Room ${oldRoomNumber} to Room ${targetRoom.roomNumber}.`,
+        type: 'INFO',
+        linkUrl: '/admin/residents',
       });
 
       return NextResponse.json({
@@ -261,19 +236,6 @@ export async function PATCH(
         },
       });
 
-      await createAuditLog({
-        adminUserId: session.userId,
-        adminName: session.name,
-        action: 'START_NOTICE_PERIOD',
-        entityType: 'RESIDENT',
-        entityId: id,
-        details: {
-          residentName: resident.fullName,
-          roomNumber: resident.room.roomNumber,
-          expectedCheckoutDate,
-        },
-      });
-
       return NextResponse.json({
         success: true,
         message: `${resident.fullName} is now marked under Notice Period (Expected Checkout: ${expectedCheckoutDate}).`,
@@ -288,7 +250,7 @@ export async function PATCH(
         return NextResponse.json({ error: 'Invalid checkout data', details: parsed.error.format() }, { status: 400 });
       }
 
-      const { checkOutDate, refundDepositAmount, deductionsAmount, notes } = parsed.data;
+      const { checkOutDate, notes } = parsed.data;
 
       const updated = await db.resident.update({
         where: { id },
@@ -305,19 +267,11 @@ export async function PATCH(
         data: { status: 'AVAILABLE' },
       });
 
-      await createAuditLog({
-        adminUserId: session.userId,
-        adminName: session.name,
-        action: 'CHECKOUT_RESIDENT',
-        entityType: 'RESIDENT',
-        entityId: id,
-        details: {
-          residentName: resident.fullName,
-          roomNumber: resident.room.roomNumber,
-          checkOutDate,
-          refundDepositAmount,
-          deductionsAmount,
-        },
+      await createNotification({
+        title: 'Resident Checked Out',
+        message: `${resident.fullName} successfully checked out from Room ${resident.room.roomNumber}.`,
+        type: 'WARNING',
+        linkUrl: '/admin/residents',
       });
 
       return NextResponse.json({
@@ -371,16 +325,11 @@ export async function DELETE(
       data: { status: 'AVAILABLE' },
     });
 
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: 'VACATE_RESIDENT',
-      entityType: 'RESIDENT',
-      entityId: id,
-      details: {
-        residentName: resident.fullName,
-        roomNumber: resident.room.roomNumber,
-      },
+    await createNotification({
+      title: 'Resident Vacated',
+      message: `${resident.fullName} marked as Vacated. Room ${resident.room.roomNumber} slot freed.`,
+      type: 'WARNING',
+      linkUrl: '/admin/residents',
     });
 
     return NextResponse.json({

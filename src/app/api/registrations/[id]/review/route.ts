@@ -34,19 +34,6 @@ export async function POST(
       },
     });
 
-    await prisma.auditLog.create({
-      data: {
-        adminName,
-        action: 'REVIEW_REGISTRATION',
-        entityType: 'REGISTRATION',
-        entityId: id,
-        details: JSON.stringify({
-          fullName: registration.fullName,
-          newStatus: 'UNDER_REVIEW',
-        }),
-      },
-    });
-
     return NextResponse.json({
       success: true,
       message: `Registration for ${registration.fullName} marked as Under Review.`,

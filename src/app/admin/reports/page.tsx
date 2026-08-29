@@ -198,7 +198,7 @@ export default function AdminReportsPage() {
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Comprehensive audit reports across resident census, room capacity utilization, collections, and checkouts.
+            Comprehensive census reports across resident census, room capacity utilization, collections, and checkouts.
           </p>
         </div>
 
@@ -694,7 +694,7 @@ export default function AdminReportsPage() {
                             {ck.checkOutDate ? new Date(ck.checkOutDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
                           </td>
                           <td className="py-3 px-3 font-bold text-white print:text-black">{ck.stayDurationDays} days</td>
-                          <td className="py-3 px-3 text-slate-300">₹{ck.securityDeposit.toLocaleString('en-IN')}</td>
+                          <td className="py-3 px-3 text-slate-300">{ck.securityDeposit ? String(ck.securityDeposit) : 'N/A'}</td>
                           <td className="py-3 px-3 text-slate-400">{ck.notes}</td>
                         </tr>
                       ))}

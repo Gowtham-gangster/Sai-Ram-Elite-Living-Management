@@ -68,6 +68,10 @@ export default function AdminRemindersPage() {
   const [viewMessageModalOpen, setViewMessageModalOpen] = useState(false);
   const [inspectedReminder, setInspectedReminder] = useState<any>(null);
 
+  // Schedule Timeline Modal State
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [inspectedSchedule, setInspectedSchedule] = useState<any>(null);
+
   // Feedback State
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -255,7 +259,7 @@ export default function AdminRemindersPage() {
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Automated candidate detection, Meta Cloud API message dispatches, and full audit trail for rent collection reminders.
+            Automated candidate detection, Meta Cloud API message dispatches, and delivery tracking for rent collection reminders.
           </p>
         </div>
 
@@ -434,13 +438,26 @@ export default function AdminRemindersPage() {
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <button
-                          onClick={() => handleOpenSendModal(c)}
-                          className="px-3 py-1.5 bg-brand-500 hover:bg-brand-400 text-slate-950 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-md"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Send Test Reminder</span>
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setInspectedSchedule(c);
+                              setScheduleModalOpen(true);
+                            }}
+                            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs inline-flex items-center gap-1 border border-slate-700"
+                            title="View Exact Reminder Timeline"
+                          >
+                            <Calendar className="w-3.5 h-3.5 text-sky-400" />
+                            <span>Schedule</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenSendModal(c)}
+                            className="px-3 py-1.5 bg-brand-500 hover:bg-brand-400 text-slate-950 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-md"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Send Test</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -519,7 +536,7 @@ export default function AdminRemindersPage() {
           <div className="p-5 border-b border-slate-800">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Reminder Dispatch History & Audit Trail</span>
+              <span>Reminder Dispatch History</span>
             </h3>
           </div>
 
@@ -671,8 +688,9 @@ export default function AdminRemindersPage() {
               onChange={(e) => setSelectedTemplateType(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white font-semibold"
             >
-              <option value="FIRST_DUE_REMINDER">1st Due Date Reminder (Due Today)</option>
-              <option value="SECOND_REMINDER">2nd Follow-up Reminder (Still Pending)</option>
+              <option value="FIRST_DUE_REMINDER">Sequence 1: D-2 First Reminder (Due in 2 days)</option>
+              <option value="DUE_DATE_REMINDER">Sequence 2: Due Date Reminder (Due today)</option>
+              <option value="OVERDUE_REMINDER">Sequence 3+: Overdue Reminder (Still pending / overdue)</option>
             </select>
           </div>
 
@@ -707,6 +725,77 @@ export default function AdminRemindersPage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* SCHEDULE INSPECTOR MODAL */}
+      <Modal
+        isOpen={scheduleModalOpen}
+        onClose={() => setScheduleModalOpen(false)}
+        title="Recurring Payment Reminder Schedule"
+        subtitle={`Automated timeline for ${inspectedSchedule?.residentName || 'Resident'} (Room ${inspectedSchedule?.roomNumber || ''})`}
+        maxWidth="md"
+      >
+        <div className="space-y-4 text-xs">
+          <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800 space-y-2">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Payment Due Date:</span>
+              <span className="font-bold text-amber-400">
+                {inspectedSchedule?.dueDate ? new Date(inspectedSchedule.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Monthly Rent:</span>
+              <span className="font-bold text-white">₹{Number(inspectedSchedule?.amountDue || 0).toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Status:</span>
+              <span className="font-bold text-emerald-400">
+                {inspectedSchedule?.scheduleStatus || 'Continues every 2 days until payment'}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-slate-300 font-bold mb-2">Automated Reminder Sequence</h4>
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {(inspectedSchedule?.reminderSchedule || []).map((s: any) => (
+                <div
+                  key={s.sequence}
+                  className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/60 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 text-[10px] font-bold flex items-center justify-center">
+                      {s.sequence}
+                    </span>
+                    <div>
+                      <div className="font-semibold text-white">
+                        {new Date(s.scheduledFor).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </div>
+                      <div className="text-[10px] text-slate-400">{s.label}</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                    IST
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-300 text-[11px] flex items-center gap-2">
+            <Info className="w-4 h-4 shrink-0 text-sky-400" />
+            <span>Reminders continue every 2 days indefinitely until verified as PAID.</span>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={() => setScheduleModalOpen(false)}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* VIEW MESSAGE MODAL */}

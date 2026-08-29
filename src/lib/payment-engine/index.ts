@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { IPaymentRecordInput, IStatusTransitionResult, PaymentStatus } from './types';
-import { createAuditLog } from '../audit';
+import { createNotification } from '../notifications';
+import { isPaymentManagedRoom, assertPaymentEnabledForRoom } from '../payments/eligibility';
 
 /**
  * Generate unique human-readable receipt number
@@ -28,6 +29,8 @@ export async function recordPaymentTransaction(
   if (!monthlyPayment) {
     throw new Error(`Monthly payment record not found: ${input.monthlyPaymentId}`);
   }
+
+  assertPaymentEnabledForRoom(monthlyPayment.room);
 
   const previousStatus = monthlyPayment.status as PaymentStatus;
   const paymentDate = input.paymentDate || new Date();
@@ -103,21 +106,12 @@ export async function recordPaymentTransaction(
     },
   });
 
-  // 5. Audit Log
-  await createAuditLog({
-    adminUserId: adminUser?.id,
-    adminName: adminName,
-    action: 'RECORD_PAYMENT',
-    entityType: 'PAYMENT',
-    entityId: monthlyPayment.id,
-    details: {
-      residentName: monthlyPayment.resident.fullName,
-      roomNumber: monthlyPayment.room.roomNumber,
-      amountPaid: input.amountPaid,
-      method: input.paymentMethod,
-      receiptNumber: receiptNumber,
-      transactionRef: input.transactionReference,
-    },
+  // 5. System Notification
+  await createNotification({
+    title: 'Payment Verified & Receipt Issued',
+    message: `Payment of ₹${Number(input.amountPaid).toLocaleString('en-IN')} confirmed for ${monthlyPayment.resident.fullName} (Room ${monthlyPayment.room.roomNumber}).`,
+    type: 'SUCCESS',
+    linkUrl: '/admin/payments',
   });
 
   return {
@@ -181,20 +175,21 @@ export async function updatePaymentStatus(
     }
   }
 
-  await createAuditLog({
-    adminUserId: adminUser?.id,
-    adminName: adminUser?.name || 'System',
-    action: `PAYMENT_STATUS_${newStatus}`,
-    entityType: 'PAYMENT',
-    entityId: monthlyPaymentId,
-    details: {
-      previousStatus,
-      newStatus,
-      resident: monthlyPayment.resident.fullName,
-      room: monthlyPayment.room.roomNumber,
-      notes,
-    },
-  });
+  if (newStatus === 'PAID') {
+    await createNotification({
+      title: 'Payment Marked as Paid',
+      message: `Monthly payment for ${monthlyPayment.resident.fullName} (Room ${monthlyPayment.room.roomNumber}) was marked as PAID.`,
+      type: 'SUCCESS',
+      linkUrl: '/admin/payments',
+    });
+  } else if (newStatus === 'OVERDUE') {
+    await createNotification({
+      title: 'Payment Marked Overdue',
+      message: `Monthly payment for ${monthlyPayment.resident.fullName} (Room ${monthlyPayment.room.roomNumber}) was marked OVERDUE.`,
+      type: 'ALERT',
+      linkUrl: '/admin/payments',
+    });
+  }
 
   return {
     success: true,
@@ -221,6 +216,12 @@ export async function generateMonthlyBillsForActiveResidents(billingMonth: strin
   let skippedCount = 0;
 
   for (const resident of activeResidents) {
+    // Skip residents in rooms where payment management is disabled
+    if (!isPaymentManagedRoom(resident.room)) {
+      skippedCount++;
+      continue;
+    }
+
     const existing = await db.monthlyPayment.findFirst({
       where: {
         residentId: resident.id,
@@ -255,12 +256,11 @@ export async function generateMonthlyBillsForActiveResidents(billingMonth: strin
     generatedCount++;
   }
 
-  await createAuditLog({
-    adminUserId: adminUser?.id,
-    adminName: adminUser?.name || 'System',
-    action: 'GENERATE_MONTHLY_DUES',
-    entityType: 'PAYMENT',
-    details: { billingMonth, generatedCount, skippedCount },
+  await createNotification({
+    title: 'Monthly Dues Generated',
+    message: `Generated ${generatedCount} dues for billing month ${billingMonth} (${skippedCount} skipped).`,
+    type: 'INFO',
+    linkUrl: '/admin/payments',
   });
 
   return { billingMonth, generatedCount, skippedCount };

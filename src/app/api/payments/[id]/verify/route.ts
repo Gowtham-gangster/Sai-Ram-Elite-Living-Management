@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { processVerifiedPayment } from '@/lib/payments/verification';
-import { createAuditLog } from '@/lib/audit';
 
 export async function POST(
   request: NextRequest,
@@ -54,24 +53,6 @@ export async function POST(
     if (!result.success) {
       return NextResponse.json({ error: result.error || 'Payment verification failed.' }, { status: 400 });
     }
-
-    // Create Audit Log
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: 'ADMIN_VERIFY_PAYMENT',
-      entityType: 'PAYMENT',
-      entityId: payment.id,
-      details: {
-        residentName: payment.resident.fullName,
-        roomNumber: payment.room.roomNumber,
-        billingMonth: payment.billingMonth,
-        amountPaid,
-        referenceId,
-        receiptNumber: result.receiptNumber,
-        isPaid: result.isPaid,
-      },
-    });
 
     return NextResponse.json({
       success: true,

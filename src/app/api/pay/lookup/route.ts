@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
         room: {
           select: {
             roomNumber: true,
+            paymentEnabled: true,
           },
         },
         monthlyPayments: {
@@ -92,11 +93,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const isPaymentManaged = resident.room ? resident.room.paymentEnabled !== false : true;
+
     // Find the latest pending/overdue payment first, or the most recent payment
-    const pendingPayment = resident.monthlyPayments.find(
-      (p) => p.status === 'PENDING' || p.status === 'OVERDUE' || p.status === 'SUBMITTED'
-    );
-    const selectedPayment = pendingPayment || resident.monthlyPayments[0] || null;
+    const pendingPayment = isPaymentManaged
+      ? resident.monthlyPayments.find(
+          (p) => p.status === 'PENDING' || p.status === 'OVERDUE' || p.status === 'SUBMITTED'
+        )
+      : null;
+    const selectedPayment = isPaymentManaged ? (pendingPayment || resident.monthlyPayments[0] || null) : null;
 
     const maskedPhone = `+91 ••••• ••${tenDigit.slice(-4)}`;
 
@@ -110,12 +115,14 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({
       found: true,
+      isPaymentManaged,
       resident: {
         id: resident.id,
         name: resident.fullName,
         roomNumber: resident.room?.roomNumber || 'Unassigned',
         maskedMobile: maskedPhone,
         status: resident.status,
+        isPaymentManaged,
       },
       payment: selectedPayment
         ? {

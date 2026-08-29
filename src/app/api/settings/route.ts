@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { HostelSettingsSchema, UpdatePasswordSchema } from '@/lib/validations';
-import { createAuditLog } from '@/lib/audit';
+import { createNotification } from '@/lib/notifications';
 import bcrypt from 'bcryptjs';
 
 export async function GET() {
@@ -28,7 +28,21 @@ export async function GET() {
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
 
-    return NextResponse.json({ settings, adminUser });
+    // Sanitize settings object to not return bank details to the UI
+    const sanitizedSettings = {
+      id: settings.id,
+      hostelName: settings.hostelName,
+      hostelAddress: settings.hostelAddress,
+      contactPhone: settings.contactPhone,
+      whatsAppNumber: settings.whatsAppNumber,
+      contactEmail: settings.contactEmail,
+      websiteUrl: settings.websiteUrl,
+      rulesAndRegulations: settings.rulesAndRegulations,
+      isBankManagedInEnv: true,
+      updatedAt: settings.updatedAt,
+    };
+
+    return NextResponse.json({ settings: sanitizedSettings, adminUser });
   } catch (error: any) {
     console.error('Error fetching settings:', error);
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
@@ -63,12 +77,6 @@ export async function PUT(request: NextRequest) {
         whatsAppNumber: data.whatsAppNumber,
         contactEmail: data.contactEmail,
         websiteUrl: data.websiteUrl || 'https://sairameliteliving.com',
-        bankName: data.bankName,
-        accountHolderName: data.accountHolderName,
-        accountNumber: data.accountNumber,
-        ifscCode: data.ifscCode,
-        upiId: data.upiId,
-        paymentInstructions: data.paymentInstructions || '',
         rulesAndRegulations: data.rulesAndRegulations || '',
       },
       create: {
@@ -79,26 +87,15 @@ export async function PUT(request: NextRequest) {
         whatsAppNumber: data.whatsAppNumber,
         contactEmail: data.contactEmail,
         websiteUrl: data.websiteUrl || 'https://sairameliteliving.com',
-        bankName: data.bankName,
-        accountHolderName: data.accountHolderName,
-        accountNumber: data.accountNumber,
-        ifscCode: data.ifscCode,
-        upiId: data.upiId,
-        paymentInstructions: data.paymentInstructions || '',
         rulesAndRegulations: data.rulesAndRegulations || '',
       },
     });
 
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: 'UPDATE_SETTINGS',
-      entityType: 'SETTING',
-      entityId: 'default',
-      details: {
-        bankName: updated.bankName,
-        upiId: updated.upiId,
-      },
+    await createNotification({
+      title: 'Hostel Settings Updated',
+      message: `Hostel profile and policy configurations were updated by ${session.name}.`,
+      type: 'INFO',
+      linkUrl: '/admin/settings',
     });
 
     return NextResponse.json({ success: true, settings: updated });
@@ -145,15 +142,6 @@ export async function PATCH(request: NextRequest) {
     await db.adminUser.update({
       where: { id: session.userId },
       data: { passwordHash: newHash },
-    });
-
-    await createAuditLog({
-      adminUserId: session.userId,
-      adminName: session.name,
-      action: 'UPDATE_ADMIN_PASSWORD',
-      entityType: 'ADMIN_USER',
-      entityId: session.userId,
-      details: { message: 'Password changed successfully' },
     });
 
     return NextResponse.json({ success: true, message: 'Password updated successfully.' });

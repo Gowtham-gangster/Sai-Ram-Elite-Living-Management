@@ -82,7 +82,7 @@ export default function RemindersPage() {
       const s = data.summary;
       setFeedback({
         type: 'success',
-        message: `Processed ${s.scanned} payments: ${s.firstRemindersSent} first reminders sent, ${s.secondRemindersSent} second reminders sent, ${s.paidCancelled} cancelled (already paid), ${s.failedCount} failed.`,
+        message: `Processed ${s.scanned} payments: ${s.firstRemindersSent || 0} D-2 reminders sent, ${s.dueRemindersSent || s.secondRemindersSent || 0} due-date reminders sent, ${s.overdueRemindersSent || 0} overdue reminders sent, ${s.paidCancelled || 0} cancelled (paid), ${s.failedCount || 0} failed.`,
       });
       fetchReminders();
     } catch (err: any) {

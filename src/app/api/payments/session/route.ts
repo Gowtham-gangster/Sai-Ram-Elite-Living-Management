@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
         room: {
           select: {
             roomNumber: true,
+            paymentEnabled: true,
           },
         },
         paymentRecords: {
@@ -43,6 +44,13 @@ export async function POST(request: NextRequest) {
 
     if (!payment) {
       return NextResponse.json({ error: 'Payment record not found.' }, { status: 404 });
+    }
+
+    if (payment.room?.paymentEnabled === false) {
+      return NextResponse.json(
+        { error: 'Online rent collection is not applicable for this room.' },
+        { status: 400 }
+      );
     }
 
     // If resident session is present, ensure ownership match

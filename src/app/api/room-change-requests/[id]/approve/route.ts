@@ -74,22 +74,7 @@ export async function POST(
         });
       }
 
-      // 4. Create Audit Log
-      await tx.auditLog.create({
-        data: {
-          adminName,
-          action: 'APPROVE_ROOM_CHANGE',
-          entityType: 'ROOM_CHANGE_REQUEST',
-          entityId: id,
-          details: JSON.stringify({
-            residentName: changeRequest.resident.fullName,
-            fromRoom: changeRequest.currentRoom.roomNumber,
-            toRoom: targetRoom.roomNumber,
-          }),
-        },
-      });
-
-      // 5. Create Notification
+      // 4. Create Notification
       await tx.notification.create({
         data: {
           type: 'SUCCESS',

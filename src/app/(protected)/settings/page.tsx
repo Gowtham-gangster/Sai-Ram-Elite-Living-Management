@@ -4,18 +4,14 @@ import React, { useState, useEffect } from 'react';
 import {
   Settings,
   Building,
-  CreditCard,
   Lock,
   Save,
   CheckCircle2,
   AlertCircle,
   RefreshCw,
-  FileText,
   Phone,
   Mail,
   MapPin,
-  QrCode,
-  ShieldCheck,
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -32,12 +28,6 @@ export default function SettingsPage() {
     whatsAppNumber: '+91 9876543210',
     contactEmail: 'admin@sairam.com',
     websiteUrl: 'https://sairameliteliving.com',
-    bankName: 'State Bank of India',
-    accountHolderName: 'SAIRAM ELITE LIVING',
-    accountNumber: '123456789012',
-    ifscCode: 'SBIN0001234',
-    upiId: 'sairamelite@sbi',
-    paymentInstructions: 'Please include Resident Name & Room Number in payment notes.',
     rulesAndRegulations: '1. Gates close at 10:30 PM.\n2. Strictly no smoking inside hostel premises.',
   });
 
@@ -93,7 +83,7 @@ export default function SettingsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to save settings.');
 
-      setSuccessMsg('Hostel & Banking settings saved successfully.');
+      setSuccessMsg('Hostel profile settings saved successfully.');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error saving settings.');
@@ -235,90 +225,15 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Section 2: Banking & UPI Details */}
-            <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4 shadow-xl">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                  <CreditCard className="w-4 h-4" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-bold text-white">Bank & UPI Settlement Credentials</h2>
-                  <p className="text-[11px] text-slate-400">Used for official payment receipts and invoices</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Bank Name</label>
-                  <input
-                    type="text"
-                    value={formData.bankName}
-                    onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Account Holder Name</label>
-                  <input
-                    type="text"
-                    value={formData.accountHolderName}
-                    onChange={(e) => setFormData({ ...formData, accountHolderName: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Account Number</label>
-                  <input
-                    type="text"
-                    value={formData.accountNumber}
-                    onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">IFSC Code</label>
-                  <input
-                    type="text"
-                    value={formData.ifscCode}
-                    onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value.toUpperCase() })}
-                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs font-semibold text-slate-300">UPI ID / VPA</label>
-                  <input
-                    type="text"
-                    value={formData.upiId}
-                    onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs font-semibold text-slate-300">Payment Instructions</label>
-                  <input
-                    type="text"
-                    value={formData.paymentInstructions}
-                    onChange={(e) => setFormData({ ...formData, paymentInstructions: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2">
+              <div className="pt-2 flex justify-end border-t border-slate-800">
                 <button
                   type="submit"
                   disabled={isSaving}
                   className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-2xl text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
-                  <span>{isSaving ? 'Saving...' : 'Save Settings'}</span>
+                  <span>{isSaving ? 'Saving...' : 'Save Profile Settings'}</span>
                 </button>
               </div>
             </div>

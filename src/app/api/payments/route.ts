@@ -199,23 +199,6 @@ export async function POST(request: NextRequest) {
       console.error('Receipt generation error on manual record:', receiptErr);
     }
 
-    // Record AuditLog
-    await db.auditLog.create({
-      data: {
-        adminUserId: session.userId,
-        adminName: session.name,
-        action: 'RECORD_PAYMENT',
-        entityType: 'MonthlyPayment',
-        entityId: monthlyPayment.id,
-        details: JSON.stringify({
-          amountPaid: data.amountPaid,
-          paymentMethod: data.paymentMethod,
-          recordedBy: session.name,
-          manual: true,
-        }),
-      },
-    });
-
     return NextResponse.json(result, { status: 201 });
   } catch (error: any) {
     console.error('Error recording payment:', error);

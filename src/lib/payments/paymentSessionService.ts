@@ -7,6 +7,7 @@ import {
   PaymentSessionDTO,
   SessionStatusResult,
 } from './types';
+import { assertPaymentEnabledForRoom } from './eligibility';
 
 /**
  * Generates a clean, unique transaction reference safe for all UPI providers:
@@ -44,6 +45,15 @@ export class PaymentSessionService {
       residentName,
       createdBy = 'RESIDENT',
     } = input;
+
+    // Verify room payment eligibility
+    const paymentRecord = await prisma.monthlyPayment.findUnique({
+      where: { id: monthlyPaymentId },
+      include: { room: true },
+    });
+    if (paymentRecord) {
+      assertPaymentEnabledForRoom(paymentRecord.room);
+    }
 
     // 1. Check if an active, non-expired session already exists for this MonthlyPayment with the EXACT same amount
     const now = new Date();
